@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2015 ARM Limited
+# All rights reserved
+# Authors: Matteo Andreozzi
+#
+# AMBA Traffic Profile CPU Pointer Chasing (flat bandwidth)
+# It does simulate a CPU issuing instruction with 1 max OT
+#
+# OT: 		1
+# FIFO : 	diabled (rate 0, level 0)
+# Total bandwidth OT Limited (READS/WRITES 1:1)
+
+profile {
+  type: READ
+  master_id: "CPU_POINTER_R"
+  fifo {
+    Full: 0
+    TxnLimit: 1
+    Total_txn: 800000
+    Rate: "0"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+  }
+  name: "CPU_POINTER_READS"
+}
+
+profile {
+  type: WRITE
+  master_id: "CPU_POINTER_W"
+  fifo {
+    Full: 0
+    TxnLimit: 1
+    Total_txn: 800000
+    Rate: "0"
+  }
+  pattern {
+    cmd: WRITE_REQ
+    address {
+      base:     0
+      increment:64
+    }
+  }
+  name: "CPU_POINTER_WRITES"
+  wait_for: "CPU_POINTER_READS PROFILE_LOCKED"
+}

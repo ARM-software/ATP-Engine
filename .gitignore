@@ -1,0 +1,6 @@
+*.a
+*.o
+*.pyc
+atpeng
+proto/*.cc
+proto/*.h

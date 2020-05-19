@@ -1,0 +1,136 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2017 ARM Limited
+# All rights reserved
+# Author: Riken Gohil
+#
+# AMBA Traffic Profile CPU:
+#
+# 71.0% CPU Pointer Chasing:
+# It does simulate a CPU issuing instruction with 10 max OT each
+# PC OT: 10
+# PC FIFO : disabled (rate 0, level 0)
+# PC Total bandwidth OT Limited (READS/WRITES 1:1)
+# PC READ Address Type: LINEAR
+# PC READ Address Base: 0
+# PC READ Address Increment: 64
+# PC WRITE Address Type: UNIFORM
+# PC WRITE Address Min: 1024
+# PC WRITE Address Max: 8192
+#
+# 29.0% CPU MEM COPY in foreground (flat bandwidth)
+# It does simulate a CPU doing a mem copy operation
+# MC OT: 5
+# MC FIFO : 10
+# MC Total bandwidth 100.0 KB/s (READS/WRITES 1:1)
+# MC READ Address Type: NORMAL
+# MC READ Address Standard Deviation: 4
+# MC READ Address Mean: 4096
+# MC WRITE Address Type: WEIBULL
+# MC WRITE Address Shape: 1
+# MC WRITE Address Scale: 10
+#
+# Total Data Transferred: 
+# CPU PC Data: 7100*64 Bytes
+# CPU MC Data: 2900*64 Bytes
+
+lowId:0
+highId:2014
+profile {
+  type: READ
+  master_id: "CPU_1"
+  fifo {
+    start_fifo_level: EMPTY
+    full_level: 0
+    ot_limit: 10
+    total_txn: 7100
+    rate: "0"
+  }
+  pattern {
+    cmd: READ_REQ
+    address {
+      base: 0
+      increment: 64
+    }
+    size: 64
+  }
+  name: "CPU_POINTER_READS_1"
+}
+
+profile {
+  type: WRITE
+  master_id: "CPU_1"
+  fifo {
+    start_fifo_level: EMPTY
+    full_level: 0
+    ot_limit: 10
+    total_txn: 7100
+    rate: "0"
+  }
+  pattern {
+    cmd: WRITE_REQ
+    random_address {
+      type: UNIFORM
+      uniform_desc {
+        min: 1024
+        max: 8192
+      }
+    }
+    size: 64
+  }
+  name: "CPU_POINTER_WRITES_1"
+  wait_for: "CPU_POINTER_READS_1 PROFILE_LOCKED"
+}
+
+profile {
+  type: READ
+  master_id: "CPU_1"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 10
+    ot_limit: 5
+    total_txn: 2900
+    rate: "50.0 KB/s"
+  }
+  pattern {
+    cmd: READ_REQ
+    random_address {
+      type: NORMAL
+      normal_desc {
+        mean: 4096
+        std_dev: 4
+      }
+    }
+    size: 64
+  }
+  name: "CPU_MEMCPY_READS"
+  wait_for: "CPU_POINTER_READS_1"
+  wait_for: "CPU_POINTER_WRITES_1"
+}
+
+profile {
+  type: WRITE
+  master_id: "CPU_1"
+  fifo {
+    start_fifo_level: EMPTY
+    full_level: 10
+    ot_limit: 5
+    total_txn: 2900
+    rate: "50.0 KB/s"
+  }
+  pattern {
+    cmd: WRITE_REQ
+    random_address {
+      type: WEIBULL
+      weibull_desc {
+        shape: 1
+        scale: 10
+      }
+    }
+    size: 64
+  }
+  name: "CPU_MEMCPY_WRITES"
+  wait_for: "CPU_MEMCPY_READS PROFILE_LOCKED"
+  wait_for: "CPU_POINTER_READS_1"
+  wait_for: "CPU_POINTER_WRITES_1"
+}

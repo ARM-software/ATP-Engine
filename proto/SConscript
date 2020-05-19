@@ -1,0 +1,16 @@
+# -*- mode:python -*-
+
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2012 ARM Limited
+# All rights reserved.
+# Authors: Matteo Andreozzi
+
+Import('*')
+
+# Only build if we have protobuf support
+if env['HAVE_PROTOBUF']:
+	ProtoBuf('tp_config.proto')
+	ProtoBuf('tp_packet.proto')
+	ProtoBuf('tp_stats.proto')
+

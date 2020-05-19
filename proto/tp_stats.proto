@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+//
+// Copyright (c) 2012-2013 ARM Limited
+// All rights reserved
+// Authors: Matteo Andreozzi
+syntax = "proto2";
+// Put all the generated messages in a namespace
+package TrafficProfiles;
+
+// Google Protocol Buffer Object used to export statistics to the host
+// platform
+message StatObject {
+    // time since when statistics started
+    required uint64 start = 1;
+    // last time statistics were recorded
+    required uint64 time = 2;
+    // total packet sent counter
+    required uint64 sent = 3;
+    // total packet received counter
+    required uint64 received = 4;
+    // how many data have been generated
+    required uint64 dataSent = 5;
+    // how many data have been received
+    required uint64 dataReceived = 6;
+    // average response latency
+    required double latency = 7;
+    // average response jitter
+    required double jitter = 8;
+    // send rate
+    required double sendRate = 9;
+    // receive rate
+    required double receiveRate = 10;
+    // FIFO buffer underruns
+    required uint64 underruns = 11;
+    // FIFO buffer overruns
+    required uint64 overruns = 12;
+    // Average outstanding transactions
+    required uint64 ot = 13;
+    // Average FIFO level
+    required uint64 fifoLevel = 14;
+}

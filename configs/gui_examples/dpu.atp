@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2017 ARM Limited
+# All rights reserved
+# Author: Riken Gohil
+#
+# AMBA Traffic Profile DPU:
+#
+# It does simulate DPU processing
+# X pixels: 3840
+# Y pixels: 2160
+# FPS: 120
+# Bits per Pixel: 10
+# Layers: 4
+# Data Size: 64
+# Total Transactions: 1296000
+# Timings: 1.5e-07
+# READ Address Type: POISSON
+# READ Address Mean: 10
+# Total needed rate: 3840 * 2160 * 120 * 10 / 8 =
+# 1.24416 GB/s on 4 layers.
+# FULL Level : data rate * 1.5e-07s
+# OT : FULL Level / Packet Size
+
+lowId:0
+highId:1024
+profile {
+  type: READ
+  master_id: "DPU_1"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 486
+    ot_limit: 4
+    total_txn: 1296000
+    rate: "1.24416 GB/s"
+  }
+  pattern {
+    cmd: READ_REQ
+    random_address {
+      type: POISSON
+      poisson_desc {
+        mean: 10
+      }
+    }
+    size: 64
+  }
+  name: "DPU_1_LAYER_1"
+}
+
+profile {
+  type: READ
+  master_id: "DPU_1"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 486
+    ot_limit: 4
+    total_txn: 1296000
+    rate: "1.24416 GB/s"
+  }
+  pattern {
+    cmd: READ_REQ
+    random_address {
+      type: POISSON
+      poisson_desc {
+        mean: 10
+      }
+    }
+    size: 64
+  }
+  name: "DPU_1_LAYER_2"
+}
+
+profile {
+  type: READ
+  master_id: "DPU_1"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 486
+    ot_limit: 4
+    total_txn: 1296000
+    rate: "1.24416 GB/s"
+  }
+  pattern {
+    cmd: READ_REQ
+    random_address {
+      type: POISSON
+      poisson_desc {
+        mean: 10
+      }
+    }
+    size: 64
+  }
+  name: "DPU_1_LAYER_3"
+}
+
+profile {
+  type: READ
+  master_id: "DPU_1"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 486
+    ot_limit: 4
+    total_txn: 1296000
+    rate: "1.24416 GB/s"
+  }
+  pattern {
+    cmd: READ_REQ
+    random_address {
+      type: POISSON
+      poisson_desc {
+        mean: 10
+      }
+    }
+    size: 64
+  }
+  name: "DPU_1_LAYER_4"
+}

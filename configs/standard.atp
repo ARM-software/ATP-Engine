@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2015 ARM Limited
+# All rights reserved
+# Authors: Matteo Andreozzi
+
+
+profile {
+  type: WRITE
+  master_id: "ALPHA"
+  fifo {
+    Full: 10000
+    FrameSize: 2000
+    Rate: "20MBps"
+  }
+  pattern {
+  	random_address {
+  		type: UNIFORM
+  		uniform_desc {
+    		min: 50
+    		max: 500
+  		}
+    }
+    alignment: 64
+  }
+  name: "PIPPO"
+}
+  
+
+
+profile {
+  type: READ
+  master_id: "OMEGA"
+  fifo {
+    Full: 10000
+    TxnLimit: 40
+    FrameTime : "10ns"
+    Rate: "20MBps"
+  }
+  pattern {
+    address {
+      Base: 	0
+      Yrange: "4096B"
+    }
+    stride {
+    	Stride: 64
+    	Xrange: "256B"
+    }
+  }
+  name: "PLUTO"
+  wait_for: "PIPPO"
+}

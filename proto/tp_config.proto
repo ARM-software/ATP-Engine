@@ -1,0 +1,293 @@
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+//
+// Copyright (c) 2012-2013 ARM Limited
+// All rights reserved
+// Authors: Matteo Andreozzi
+syntax = "proto2";
+// Put all the generated messages in a namespace
+package TrafficProfiles;
+
+// import tp_packet which defines PacketCommand
+import "tp_packet.proto";
+
+// Random generator descriptor, contains random distribution types
+// and configuration parameters for each of them
+message RandomDesc {
+
+    enum Type {
+        UNIFORM = 0;
+        NORMAL = 1;
+        POISSON = 2;
+        WEIBULL = 3;
+    }
+    // Uniform random number generator, it is configured by providing interval boundaries
+    message UniformDesc {
+        required uint64 min = 1;
+        required uint64 max = 2;
+    }
+
+    // Normal random number generator, it is configured by providing mean and standard deviation
+    message NormalDesc {
+        required uint64 mean = 3;
+        required uint64 std_dev = 4;
+    }
+
+    // Poisson random number generator, it is configured by providing the distribution mean
+    message PoissonDesc {
+        required uint64 mean = 5;
+    }
+
+    // Weibull random number generator, it is configured by providing shape and scale
+    message WeibullDesc {
+        required uint64 shape = 6;
+        required uint64 scale = 7;
+    }
+    // Random number generator type
+    required Type type = 8;
+
+    // uniform random number descriptor
+    optional UniformDesc uniform_desc = 9;
+    // normal random number descriptor
+    optional NormalDesc normal_desc = 10;
+    // Poisson random number descriptor
+    optional PoissonDesc poisson_desc = 11;
+    // Weibull random number descriptor
+    optional WeibullDesc weibull_desc = 12;
+}
+
+message PatternConfiguration {
+
+    optional Command cmd = 1;
+
+    message Address {
+        // starting base address
+        required uint64 base = 2;
+        // address increment step
+        optional uint64 increment = 3;
+        // address range, expressed in bytes and multiple of
+        optional string range = 4;
+        // address range, expressed in bytes and multiple of
+        optional string Yrange = 5;
+        
+        // optional parameter: the first packet address starts from here, not base
+        // (wraps to base once range end is reached, if configured)
+        optional uint64 start = 6 [default=0];
+    }
+
+    // stride specifier
+    // if configured, it will produce sequences of incremental
+    // addresses before extracting a new random one
+
+    message Stride {
+        // number of incremental addresses to generate (0 means unlimited)
+        optional uint64 n = 7 [default = 0];
+        // increment to be applied to the addresses of the stride
+        optional uint64 increment = 8;
+        // increment to be applied to the addresses of the stride
+        optional uint64 Stride = 9;
+         // stride range, expressed in bytes and multiple of
+        optional string range = 10;
+        // stride range, expressed in bytes and multiple of
+        optional string Xrange = 11;
+    }
+
+    // address generation format
+    optional  Address     address = 12;
+    optional  RandomDesc  random_address = 13;
+    // optional stride configuration for addresses
+    optional Stride stride = 14;
+
+    // size generation format
+    optional uint64 size = 15;
+    optional uint64 TxnSize = 16;
+    optional RandomDesc random_size = 17;
+
+    // optional byte alignment for addresses
+    // a value of 0 is natural alignment based on
+    // the generated packet size
+    optional uint64 alignment = 18;
+    // optional Packet ID tagging configuration - if set, superseded the global ID configuration
+    // Packet ID low ID value
+    optional uint64 lowId = 19;
+    // Packet ID high ID value
+    optional uint64 highId = 20;
+    // DEBUG feature : force a specific command to wait for
+    // in order to consider an in-flight packet as
+    // no longer outstanding.
+    optional Command wait_for = 21;
+}
+
+// Frequency generation for packets contained in a specific Profile
+// The average rate that the profile will settle to, given sufficient bandwidth,
+// is determined by the number of outstanding transactions
+// FIFO size and service delay
+
+message FifoConfiguration {
+    // FIFO configuration
+
+    // The starting level of the profile, can be either 0/Empty or 1/Full
+    enum StartupLevel {
+        EMPTY = 0;
+        FULL = 1;
+    }
+
+    optional StartupLevel start_fifo_level = 1;
+    optional StartupLevel Start = 2;
+    // This is the maximum amount (in bytes) of overflow/underflow that the profile can accept.
+    // This may also be referred to as the FIFO Depth.
+    optional uint64 full_level = 3;
+    
+    // This is the maximum amount (in bytes) of overflow/underflow that the profile can accept.
+    // This may also be referred to as the FIFO Depth.
+    optional uint64 Full = 4;
+    
+    // This is the limit to the number of outstanding transactions that the profile can generate.
+    //  for checker type profiles - if set, they will ignore this parameter
+    optional uint64 ot_limit = 5;
+    
+    // This is the limit to the number of outstanding transactions that the profile can generate.
+    //  for checker type profiles - if set, they will ignore this parameter
+    optional uint64 TxnLimit = 6;
+    
+    // This is the total number of transactions this profile will generate before deactivating itself
+    //  for checker type profiles - if set, they will ignore this parameter
+    optional uint64 total_txn = 7;
+    
+    // . Specifies the number of bytes transferred from the start of the profile before
+    // deactivates itself
+    optional string FrameSize = 8;
+    
+    // . Specifies the number of cycles or time
+	// from the start of the profile before it deactivates itself
+    optional string FrameTime = 9;
+    
+    // Fill/Depletion rate of this profile.
+    // Can be a floating point value and include one of the following specifiers:
+    // TBps, GBps, MBps, KBps, Bps
+    required string rate = 10;
+    
+    // Clock Frequency Frequency - . 
+    // Interface clock frequency for the
+	// profile. Facilitates conversion between
+	// time-based and cycle-based representations
+	// of the profile.
+	optional uint64 Frequency = 11; 
+}
+
+message SlaveConfiguration {
+    // slave profile configuration
+
+    // This is the maximum rate that the slave can process data at.
+    // Can be a floating point value and include one
+    // of the following specifiers:
+    // TBps, GBps, MBps, KBps, Bps
+    required string rate = 1 [default = "0"];
+
+    // This is the latency with which the slave will respond to requests
+    // Can be a floating point value and include one of the following specifiers:
+    // s, ms, us, ns, ps
+    optional string latency = 2 [default = "0"];
+
+    // Random latency generation
+    optional  RandomDesc  random_latency = 3;
+
+    // Random latency time unit: one of s,ms,us,ns,ps
+    optional string random_latency_unit = 4 [default = "ns"];
+
+    // This is the limit to the number of outstanding transactions
+    // that the slave can accept.
+    optional uint64 ot_limit = 5;
+    
+    // This is the limit to the number of outstanding transactions
+    // that the slave can accept.
+    optional uint64 TxnLimit = 6;
+
+    // This is the granularity with which transactions are processed.
+    optional uint64 granularity = 7;
+    
+    // This is the granularity with which transactions are processed.
+    optional uint64 TxnSize = 8;
+
+     // Master assigned to this slave
+    repeated string master = 9;
+
+    // lowest address assigned to this slave (inclusive)
+    optional uint64 low_address = 10;
+
+    // highest address assigned to this slave (inclusive)
+    optional uint64 high_address = 11;
+
+    // optional range to set high address, in bytes (low_address+range=high_address)
+    optional string address_range = 12;
+
+}
+
+message DelayConfiguration {
+    // delay profile configuration
+
+    // This is the time the profile will stay active, do nothing, then terminate.
+    // Can be a floating point value and include one of the following specifiers:
+    // s, ms, us, ns, ps
+    required string time = 1;
+}
+
+
+message Profile {
+    enum Type {
+        READ = 0;
+        WRITE = 1;
+        NONE = 2;
+    }
+    // Profile type - defines if is a profile of type 'READ',
+    // i.e. sends read requests and store responses in the FIFO,
+    // or 'WRITE', i.e. writes the FIFO content to memory
+    // a delay profile does not have to have the type field
+    optional Type type = 1;
+    // master identifier - multiple profiles can share the same master ID
+    optional string master_id = 2;
+    // FIFO configuration - configures a master profile
+    optional FifoConfiguration fifo = 3;
+    // SLAVE configuration - configures a slave profile
+    optional SlaveConfiguration slave = 4;
+    // DELAY configuration - configures a delay profile
+    optional DelayConfiguration delay = 5;
+    // Profiles which should complete before this one can activate
+    repeated string wait_for = 6;
+    // Packets to be generated at every send call - not setting it means this is a Checker
+    optional PatternConfiguration pattern = 7;
+    // Profile identifier - if it's not set, it'll be generated as profile<#> ,e.g. profile3
+    optional string name = 8;
+    // Profile to check - it is required for Checker type parameter, links a checker to a profile
+    repeated string check = 9;
+    // Master IOMMU unique identifier
+    optional uint32 iommu_id = 10;
+}
+
+message Configuration {
+    // the global time unit in "cycles" or seconds/sub-multiples of
+    enum TimeUnit {
+        CYCLES = 0;
+        PS = 1;
+        NS = 2;
+        US = 3;
+        MS = 4;
+        S  = 5;
+    }
+
+    // global ATP Engine frequency. If set, and the timeUnit is set to CYCLES, then
+    // ATP Engine will convert all configured rates into bytes/ns
+    optional uint64 frequency = 1;
+    optional TimeUnit timeUnit = 2 [default = CYCLES];
+    // if set, it will apply to the timeUnit and reduce it by the configured factor (i.e. rate every 10s)
+    optional uint64 period = 3 [default = 1];
+    // Global Packet ID low ID value
+    optional uint64 lowId = 4;
+    // Global Packet ID high ID value
+    optional uint64 highId = 5;
+    // Global Tracing enable flag
+    optional bool tracing = 6;
+    // Global Tracing output directory
+    optional string trace_dir = 7;
+    // configured Traffic Profiles
+    repeated Profile profile = 8;
+}

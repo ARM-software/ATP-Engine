@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2015 ARM Limited
+# All rights reserved
+# Authors: Matteo Andreozzi
+#
+# AMBA Traffic Profile CPU MEM COPY in foreground (flat bandwidth)
+# It does simulate a CPU doing a mem copy operation
+#
+# OT: 		32
+# FIFO : 	2048
+# Total bandwidth 24 GB/s (READS/WRITES 1:1)
+
+profile {
+  type: READ
+  master_id: "CPU_MEMCPY_R"
+  fifo {
+    Full: 2048
+    TxnLimit: 32
+    Total_txn: 800000
+    Rate: "12 GB/s"
+  }
+  pattern {
+    address {
+      Base:     0
+      Increment:64
+    }
+  }
+  name: "CPU_MEMCPY_READS"
+}
+
+profile {
+  type: WRITE
+  master_id: "CPU_MEMCPY_W"
+  fifo {
+    Full: 2048
+    TxnLimit: 32
+    Total_txn: 800000
+    Rate:  "12 GB/s"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+  }
+  name: "CPU_MEMCPY_WRITES"
+  wait_for: "CPU_MEMCPY_READS PROFILE_LOCKED"
+}

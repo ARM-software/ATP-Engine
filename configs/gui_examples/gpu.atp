@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2017 ARM Limited
+# All rights reserved
+# Author: 
+#
+# AMBA Traffic Profile GPU (flat bandwidth):
+#
+# Reading / Writing data equal to 3840 * 2160 * 4 bytes per pixel
+# (10 frame) at 60 Frames per second: 19.90656 GB/s
+# 
+# X pixels: 3840
+# Y pixels: 2160
+# FPS: 60
+# Bytes per Pixel: 4
+# Frames: 10
+# Data Size: 64
+# Total Transactions: 128000
+# OT: 10
+# FIFO : OT*PacketSize = 7776
+# READ Address Type: LINEAR
+# READ Address Base: 0
+# READ Address Increment: 64
+# WRITE Address Type: NORMAL
+# WRITE Address Standard Deviation: 10
+# WRITE Address Mean: 4096
+#
+
+lowId:0
+highId:1024
+profile {
+  type: READ
+  master_id: "GPU"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 7776
+    ot_limit: 10
+    total_txn: 128000
+    rate: "19.90656 GB/s"
+  }
+  pattern {
+    cmd: READ_REQ
+    address {
+      base: 0
+      increment: 64
+    }
+    size: 64
+  }
+  name: "GPU_READS"
+}
+
+profile {
+  type: WRITE
+  master_id: "GPU"
+  fifo {
+    start_fifo_level: EMPTY
+    full_level: 7776
+    ot_limit: 10
+    total_txn: 128000
+    rate: "19.90656 GB/s"
+  }
+  pattern {
+    cmd: WRITE_REQ
+    random_address {
+      type: NORMAL
+      normal_desc {
+        mean: 4096
+        std_dev: 10
+      }
+    }
+    size: 64
+  }
+  name: "GPU_WRITES"
+  wait_for: "GPU_READS PROFILE_LOCKED"
+}
