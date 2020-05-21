@@ -27,7 +27,7 @@ LIB_CPP_FILES   := kronos.cc utilities.cc event.cc event_manager.cc fifo.cc logg
            packet_tracer.cc random_generator.cc stats.cc \
     		   traffic_profile_desc.cc traffic_profile_manager.cc traffic_profile_master.cc traffic_profile_checker.cc \
     		   traffic_profile_slave.cc traffic_profile_delay.cc
-LIB_H_FILES     := $(LIB_CPP_FILES:.cc=.hh)
+LIB_H_FILES     := $(LIB_CPP_FILES:.cc=.hh) types.hh
 LIB_OBJ_FILES   := $(LIB_CPP_FILES:.cc=.o)
 TEST_CPP_FILES  := shell.cc test_atp.cc test.cc
 TEST_H_FILES    := test_atp.hh shell.hh
