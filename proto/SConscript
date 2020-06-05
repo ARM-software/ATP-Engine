@@ -2,15 +2,19 @@
 
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-# Copyright (c) 2012 ARM Limited
+# Copyright (c) 2012, 2021 ARM Limited
 # All rights reserved.
 # Authors: Matteo Andreozzi
+#          Adrian Herrera
 
 Import('*')
 
 # Only build if we have protobuf support
 if env['HAVE_PROTOBUF']:
-	ProtoBuf('tp_config.proto')
-	ProtoBuf('tp_packet.proto')
-	ProtoBuf('tp_stats.proto')
+	node = {}
+	node['config'] = ProtoBuf('tp_config.proto').tnode
+	node['packet'] = ProtoBuf('tp_packet.proto').tnode
+	node['stats'] = ProtoBuf('tp_stats.proto').tnode
+	# Dependencies
+	Depends(node['config'], node['packet'])
 

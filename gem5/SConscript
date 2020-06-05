@@ -12,5 +12,7 @@ Import('*')
 # tracing relies on it
 if env['HAVE_PROTOBUF']:
     SimObject('ProfileGen.py')
+    SimObject('ATPDevice.py')
     Source('profile_gen.cc')
+    Source('atp_device.cc')
     DebugFlag('ATP')

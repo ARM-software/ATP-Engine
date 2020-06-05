@@ -5,6 +5,7 @@
 # Authors: Matteo Andreozzi
 
 from argparse import ArgumentParser
+from math import log
 from os import walk
 from os.path import join
 import sys
@@ -114,12 +115,17 @@ parser.add_argument("--sink-response-latency", type=str, default="80ns",
 options = parser.parse_args()
 
 addToPath(options.gem5_configs_path)
-from common.MemConfig import config_mem
+from common.MemConfig import config_mem, create_mem_intf
 from common.ObjectList import mem_list
 
 if options.mem_type not in mem_list.get_names():
     mem_list.print()
     fatal("Invalid memory type")
+
+# the following assumes that we are using the native DRAM controller
+mem_type = mem_list.get(options.mem_type)
+if not any([issubclass(mem_type, base) for base in (QoSMemSinkInterface, DRAMInterface)]):
+    fatal("Only QoSMemSink or DRAM interfaces supported")
 
 # start with the system itself, using a multi-layer X GHz
 # crossbar, delivering N bytes / 3 cycles (one header cycle)
@@ -137,35 +143,44 @@ system.mem_ranges = [mem_range]
 # do not worry about reserving space for the backing store
 mmap_using_noreserve = True
 
-options.external_memory_system = 0
-options.tlm_memory = 0
-options.elastic_trace_en = 0
-config_mem(options, system)
+# gem5 v20.1 -> no support for "QoSMemSinkInterface" in "config_mem"
+if issubclass(mem_type, QoSMemSinkInterface):
+    nbr_mem_ctrls = options.mem_channels
+    intlv_bits = int(log(nbr_mem_ctrls, 2))
+    intlv_size = max(128, system.cache_line_size.value)
+    mem_ctrls = []
+    for i in range(nbr_mem_ctrls):
+        mem_intf = create_mem_intf(mem_type, system.mem_ranges[0], i,
+                                   nbr_mem_ctrls, intlv_bits, intlv_size, 0)
+        mem_ctrls.append(QoSMemSinkCtrl(interface=mem_intf))
+        mem_ctrls[-1].port = system.membus.mem_side_ports
+    system.mem_ctrls = mem_ctrls
+else:
+    config_mem(options, system)
 
-# the following assumes that we are using the native DRAM
-# controller, check to be sure
-
-update = lambda o, attr, v: setattr(o, attr, v) if hasattr(o, attr) else None
 for mem_ctrl in system.mem_ctrls:
-    mem_ctrl.null = True
-    update(mem_ctrl, "write_buffer_size", options.write_buffer_size)
-    update(mem_ctrl, "read_buffer_size", options.read_buffer_size)
-    if isinstance(mem_ctrl, m5.objects.DRAMCtrl):
+    if issubclass(mem_type, QoSMemSinkInterface):
+        mem_ctrl.interface.null = True
+        mem_ctrl.write_buffer_size = options.write_buffer_size
+        mem_ctrl.read_buffer_size = options.read_buffer_size
+        mem_ctrl.request_latency = options.sink_request_latency
+        mem_ctrl.response_latency = options.sink_response_latency
+    else:
         mem_ctrl.write_high_thresh_perc = options.write_high_thresh_perc
         mem_ctrl.write_low_thresh_perc = options.write_low_thresh_perc
         mem_ctrl.min_writes_per_switch = options.min_writes_per_switch
-        mem_ctrl.page_policy = options.page_policy
-        mem_ctrl.max_accesses_per_row = options.max_accesses_per_row
+        mem_ctrl.dram.null = True
+        mem_ctrl.dram.write_buffer_size = options.write_buffer_size
+        mem_ctrl.dram.read_buffer_size = options.read_buffer_size
+        mem_ctrl.dram.page_policy = options.page_policy
+        mem_ctrl.dram.max_accesses_per_row = options.max_accesses_per_row
         # Set the address mapping based on input argument
         if options.addr_map == 0:
-            mem_ctrl.addr_mapping = "RoCoRaBaCh"
+            mem_ctrl.dram.addr_mapping = "RoCoRaBaCh"
         elif options.addr_map == 1:
-            mem_ctrl.addr_mapping = "RoRaBaCoCh"
+            mem_ctrl.dram.addr_mapping = "RoRaBaCoCh"
         else:
             fatal("Did not specify a valid address map argument")
-    elif isinstance(mem_ctrl, m5.objects.QoSMemSinkCtrl):
-        mem_ctrl.request_latency = options.sink_request_latency
-        mem_ctrl.response_latency = options.sink_response_latency
 
 # disable ATP kill switches for configured simulation run time
 atp_exit = False if options.abs_max_tick is not m5.MaxTick else True
@@ -218,11 +233,11 @@ for stream in options.streams:
     system.atp.initStream(master, rootp, rbase, rrange, wbase, wrange, task_id)
 
 # connect the ATP gem5 adaptor to the system bus (hence to the memory)
-for i in xrange(options.master_ports):
-    system.atp.port = system.membus.slave
+for i in range(options.master_ports):
+    system.atp.port = system.membus.cpu_side_ports
 
 # connect the system port even if it is not used in this example
-system.system_port = system.membus.slave
+system.system_port = system.membus.cpu_side_ports
 
 root = Root(full_system = False, system = system)
 root.system.mem_mode = 'timing'

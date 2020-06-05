@@ -30,8 +30,8 @@
 #include "sim/sim_object.hh"
 
 // ATP includes
-#include "../proto/tp_config.pb.h"
-#include "../traffic_profile_manager.hh"
+#include "proto/tp_config.pb.h"
+#include "traffic_profile_manager.hh"
 
 /*!
  *\brief AMBA Traffic Profile Generator
@@ -179,12 +179,10 @@ protected:
     std::vector<std::unique_ptr<ProfileGenPort>> port;
 
     //! Master to port mapping
-    std::map<MasterID, PortID> interface;
+    std::map<RequestorID, PortID> interface;
 
     //! Packets waiting to be sent, organised per master
     std::multimap<std::string, TrafficProfiles::Packet*> localBuffer;
-    //! per-master count of packets waiting to be sent
-    std::map<MasterID, uint64_t> atpPacketCount;
 
     //! Pointer to packet stalled on the ProfileGenPorts
     std::map<PortID, Packet*> retryPkt;
@@ -197,9 +195,9 @@ protected:
      * responses faster by exploiting the GID information
      * maintained by this adaptor
      *
-     * the table is built as MasterID, Address, Command, Request UID
+     * the table is built as RequestorID, Address, Command, Request UID
      */
-    std::map<MasterID, std::multimap<uint64_t,
+    std::map<RequestorID, std::multimap<uint64_t,
         std::multimap<TrafficProfiles::Command, uint64_t>>> routingTable;
 
 

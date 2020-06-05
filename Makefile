@@ -19,7 +19,7 @@ CPPUNIT_C_FLAGS := $(shell pkg-config --cflags cppunit)
 PROTOBUF_L_FLAGS:= $(shell pkg-config --libs protobuf)
 CPPUNIT_L_FLAGS	:= $(shell pkg-config --libs cppunit)
 CXX_FLAGS       := $(PROTOBUF_C_FLAGS) -std=c++11 -Wall -Werror -Wextra -Wno-unused-parameter -Wno-unused-variable $(CPPUNIT_C_FLAGS) -fPIC $(EXTRA_CXX_FLAGS)
-LD_FLAGS        := $(PROTOBUF_L_FLAGS) $(CPPUNIT_L_FLAGS)
+LD_FLAGS        := $(PROTOBUF_L_FLAGS) $(CPPUNIT_L_FLAGS) $(EXTRA_LD_FLAGS)
 PROTO_SRC_DIR   := ./proto/
 PROTO_SRC       := $(wildcard $(PROTO_SRC_DIR)tp*.proto)
 PROTO_DIR       := ./proto/
@@ -39,11 +39,14 @@ PROTO_CPP_FILES := $(PROTO_OBJ_FILES:.o=.cc)
 PROTO_H_FILES   := $(PROTO_OBJ_FILES:.o=.h)
 
 # install command (MKDIR and FILE) and install directory for the make install target
-INSTALL_DIR         := ./install
-INSTALL_INCLUDE_DIR := $(INSTALL_DIR)/include/arm/atp
-INSTALL_LIB_DIR     := $(INSTALL_DIR)/lib
-INSTALL_MKDIR       := install -m 755 -d
-INSTALL_FILE	    := install -m 644
+prefix		?= ./install
+exec_prefix	?= $(prefix)
+bindir		?= $(exec_prefix)/bin
+libdir		?= $(exec_prefix)/lib
+includedir	?= $(prefix)/include/arm/atp
+INSTALL_EXEC	:= install -m 755
+INSTALL_MKDIR	:= $(INSTALL_EXEC) -d
+INSTALL_FILE	:= install -m 644
 
 # binary name
 BIN             := atpeng
@@ -65,8 +68,8 @@ debug_file: debug
 
 .PHONY: clean cleanest install install-include install-include-proto install-lib
 
-$(PROTO_CPP_FILES) $(PROTO_H_FILES): $(PROTO_SRC)
-	$(PROTOC) -I $(PROTO_SRC_DIR) --cpp_out=$(PROTO_DIR) $(PROTO_SRC)
+%.pb.cc %.pb.h: %.proto
+	$(PROTOC) -I $(PROTO_SRC_DIR) --cpp_out=$(PROTO_DIR) $<
 
 $(BIN): $(TEST_OBJ_FILES) $(STATIC_LIB)
 	$(CXX) $^ $(LD_FLAGS) -o $@
@@ -75,7 +78,7 @@ $(STATIC_LIB): $(LIB_OBJ_FILES) $(PROTO_OBJ_FILES)
 	ar rcs $(STATIC_LIB) $^
 
 %.o: %.cc $(PROTO_H_FILES) $(H_FILES)
-	$(CXX) $(CXX_FLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXX_FLAGS) -c -o $@ $<
 
 clean:
 	@rm -rf $(PROTO_OBJ_FILES)
@@ -96,16 +99,20 @@ count:
 doc: $(H_FILES) $(CPP_FILES)
 	@doxygen doxygen.cfg
 
-install: install-include install-include-proto install-lib
+install: install-include install-include-proto install-lib install-bin
 
 install-include-proto: $(PROTO_H_FILES)
-	$(INSTALL_MKDIR) $(INSTALL_INCLUDE_DIR)/proto
-	$(INSTALL_FILE) $^ $(INSTALL_INCLUDE_DIR)/proto
+	$(INSTALL_MKDIR) $(includedir)/proto
+	$(INSTALL_FILE) $^ $(includedir)/proto
 
 install-include: $(LIB_H_FILES)
-	$(INSTALL_MKDIR) $(INSTALL_INCLUDE_DIR)
-	$(INSTALL_FILE) $^ $(INSTALL_INCLUDE_DIR)
+	$(INSTALL_MKDIR) $(includedir)
+	$(INSTALL_FILE) $^ $(includedir)
 
 install-lib: $(STATIC_LIB)
-	$(INSTALL_MKDIR) $(INSTALL_LIB_DIR)
-	$(INSTALL_FILE) $^ $(INSTALL_LIB_DIR)
+	$(INSTALL_MKDIR) $(libdir)
+	$(INSTALL_FILE) $^ $(libdir)
+
+install-bin: $(BIN)
+	$(INSTALL_MKDIR) $(bindir)
+	$(INSTALL_EXEC) $^ $(bindir)

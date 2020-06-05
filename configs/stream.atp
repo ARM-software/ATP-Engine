@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2019 ARM Limited
+# All rights reserved
+# Author: Matteo Andreozzi
+ 
+
+profile {
+  master_id: "STREAM"
+  delay {
+  	time : "0s"
+  }
+
+  name: "ROOT"
+  wait_for: "ROOT ACTIVATION"
+}
+
+profile {
+  type: READ
+  master_id: "STREAM"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 256
+    ot_limit: 4
+    total_txn: 10
+    rate: "100 MBps"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+    size: 64
+
+  }
+  name: "STREAM_NODE1"
+  wait_for: "ROOT"
+}
+
+profile {
+  type: READ
+  master_id: "STREAM"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 256
+    ot_limit: 4
+    total_txn: 10
+    rate: "100 MBps"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+    size: 64
+
+  }
+  name: "STREAM_NODE2"
+  wait_for: "ROOT"
+}
+
+profile {
+  type: READ
+  master_id: "STREAM"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 256
+    ot_limit: 4
+    total_txn: 10
+    rate: "100 MBps"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+    size: 64
+
+  }
+  name: "STREAM_NODE3"
+  wait_for: "ROOT"
+}
+
+profile {
+  type: READ
+  master_id: "STREAM"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 256
+    ot_limit: 4
+    total_txn: 10
+    rate: "100 MBps"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+    size: 64
+
+  }
+  name: "STREAM_LAYER1_NODE1"
+  wait_for: "STREAM_NODE1"
+}
+
+profile {
+  type: READ
+  master_id: "STREAM"
+  fifo {
+    start_fifo_level: FULL
+    full_level: 256
+    ot_limit: 4
+    total_txn: 10
+    rate: "100 MBps"
+  }
+  pattern {
+    address {
+      base:     0
+      increment:64
+    }
+    size: 64
+
+  }
+  name: "STREAM_LAYER1_NODE2"
+  wait_for: "STREAM_NODE2"
+}

@@ -1,0 +1,2 @@
+obj-m := atp_buffer_manager.o atp_device.o
+ccflags-y += $(ATP_CFLAGS)
