@@ -300,7 +300,7 @@ bool TrafficProfileMaster::receive(
             if (0 == ot) {
             ERROR("TrafficProfileMaster::receive [", this->name,
                     "] address ", Utilities::toHex(packet->addr()),
-                    "negative OT detected at time", time, "stats",
+                    "negative OT detected at time", t, "stats",
                     stats.dump());
             }
             ot--;
