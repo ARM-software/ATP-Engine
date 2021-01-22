@@ -147,20 +147,20 @@ config_mem(options, system)
 
 update = lambda o, attr, v: setattr(o, attr, v) if hasattr(o, attr) else None
 for mem_ctrl in system.mem_ctrls:
-    mem_ctrl.null = True
-    update(mem_ctrl, "write_buffer_size", options.write_buffer_size)
-    update(mem_ctrl, "read_buffer_size", options.read_buffer_size)
-    if isinstance(mem_ctrl, m5.objects.DRAMCtrl):
+    mem_ctrl.dram.null = True
+    update(mem_ctrl.dram, "write_buffer_size", options.write_buffer_size)
+    update(mem_ctrl.dram, "read_buffer_size", options.read_buffer_size)
+    if isinstance(mem_ctrl, m5.objects.MemCtrl):
         mem_ctrl.write_high_thresh_perc = options.write_high_thresh_perc
         mem_ctrl.write_low_thresh_perc = options.write_low_thresh_perc
         mem_ctrl.min_writes_per_switch = options.min_writes_per_switch
-        mem_ctrl.page_policy = options.page_policy
-        mem_ctrl.max_accesses_per_row = options.max_accesses_per_row
+        mem_ctrl.dram.page_policy = options.page_policy
+        mem_ctrl.dram.max_accesses_per_row = options.max_accesses_per_row
         # Set the address mapping based on input argument
         if options.addr_map == 0:
-            mem_ctrl.addr_mapping = "RoCoRaBaCh"
+            mem_ctrl.dram.addr_mapping = "RoCoRaBaCh"
         elif options.addr_map == 1:
-            mem_ctrl.addr_mapping = "RoRaBaCoCh"
+            mem_ctrl.dram.addr_mapping = "RoRaBaCoCh"
         else:
             fatal("Did not specify a valid address map argument")
     elif isinstance(mem_ctrl, m5.objects.QoSMemSinkCtrl):
@@ -218,11 +218,11 @@ for stream in options.streams:
     system.atp.initStream(master, rootp, rbase, rrange, wbase, wrange, task_id)
 
 # connect the ATP gem5 adaptor to the system bus (hence to the memory)
-for i in xrange(options.master_ports):
-    system.atp.port = system.membus.slave
+for i in range(options.master_ports):
+    system.atp.port = system.membus.cpu_side_ports
 
 # connect the system port even if it is not used in this example
-system.system_port = system.membus.slave
+system.system_port = system.membus.cpu_side_ports
 
 root = Root(full_system = False, system = system)
 root.system.mem_mode = 'timing'

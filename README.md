@@ -52,7 +52,7 @@ An executable ``atpeng`` and a static library ``libatp.a`` are produced as a res
 ### Hosted (gem5)
 
 ```bash
-git clone https://github.com/gem5/gem5 -b v20.0.0.3
+git clone https://github.com/gem5/gem5 -b v20.1.0.2
 cd gem5/
 scons EXTRAS=../ATP-Engine -j $(nproc) build/ARM/gem5.opt
 ```

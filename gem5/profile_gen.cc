@@ -116,7 +116,7 @@ void ProfileGen::init() {
     // register masters and associate with ports
 
     for (auto& m : masterNames) {
-        MasterID id = system->getGlobalMasterId(m);
+        RequestorID id = system->getGlobalRequestorId(m);
         // register port number to current master
         if (port.size() > interface.size()) {
             uint64_t ports = interface.size();
@@ -132,9 +132,7 @@ void ProfileGen::init() {
     }
 
     // Register a callback to record ATP statistics
-    Callback* cb =
-            new MakeCallback<ProfileGen, &ProfileGen::recordAtpStats>(this);
-    Stats::registerDumpCallback(cb);
+    Stats::registerDumpCallback([this]() { recordAtpStats(); });
 
     // initializing watchdog timer to 1s , based on gem5 configured time resolution
     watchdogEventTimer = SimClock::Float::s;
@@ -230,7 +228,7 @@ TrafficProfiles::Command ProfileGen::getAtpCommand(const Packet* p) const {
 
 Packet* ProfileGen::buildGEM5Packet(const TrafficProfiles::Packet* p) {
     // Create new request
-    MasterID masterId = system->getGlobalMasterId(p->master_id());
+    RequestorID masterId = system->getGlobalRequestorId(p->master_id());
     const uint64_t streamId{ p->stream_id() };
 
     RequestPtr req = std::make_shared<Request>(
@@ -266,7 +264,7 @@ TrafficProfiles::Packet* ProfileGen::buildATPPacket(const Packet* p) {
     pkt->set_size(p->getSize());
     pkt->set_time(getAtpTime());
 
-    pkt->set_master_id(system->getMasterName(p->req->masterId()));
+    pkt->set_master_id(system->getRequestorName(p->req->requestorId()));
 
     TrafficProfiles::Command cmd = getAtpCommand(p);
 
@@ -353,8 +351,8 @@ void ProfileGen::tracePacket(const Packet* pkt) {
 
 void ProfileGen::traceM3iPacket(const Packet* pkt) {
     if (traceM3i) {
-        MasterID mId = pkt->req->masterId();
-        string m3iName = system->getMasterName(mId) + ".m3i";
+        RequestorID mId = pkt->req->requestorId();
+        string m3iName = system->getRequestorName(mId) + ".m3i";
         // if this master M3I file trace file is open
         std::ofstream * traceM3iFile =
                 static_cast<std::ofstream *>(simout.findOrCreate(m3iName)->stream());
@@ -393,7 +391,7 @@ void ProfileGen::watchDog(){
 
 void ProfileGen::addRoutingEntry(const TrafficProfiles::Packet* p) {
 
-    MasterID mId = system->getGlobalMasterId(p->master_id());
+    RequestorID mId = system->getGlobalRequestorId(p->master_id());
 
     auto& masterTable = routingTable[mId];
 
@@ -420,13 +418,13 @@ uint64_t ProfileGen::lookupAndRemoveRoutingEntry(const Packet* p) {
 
     try {
         // O(1) lookup in nested hashmaps
-        auto& masterTable = routingTable.at(p->req->masterId());
+        auto& masterTable = routingTable.at(p->req->requestorId());
 
         auto addressTable = masterTable.find(p->getAddr());
 
         DPRINTF(ATP, "ProfileGen::%s packet "
                 "master %d address %#X, size %d\n", __func__,
-                p->req->masterId(), p->getAddr(), p->getSize());
+                p->req->requestorId(), p->getAddr(), p->getSize());
 
         if (addressTable != masterTable.end()) {
             auto entry = addressTable->second.find(getAtpCommand(p));
@@ -438,11 +436,11 @@ uint64_t ProfileGen::lookupAndRemoveRoutingEntry(const Packet* p) {
                 masterTable.erase(addressTable);
             }
             if (masterTable.empty()) {
-                routingTable.erase(routingTable.find(p->req->masterId()));
+                routingTable.erase(routingTable.find(p->req->requestorId()));
             }
         } else {
             DPRINTF(ATP, "ProfileGen::%s master table content for master %d\n",
-                    __func__, p->req->masterId());
+                    __func__, p->req->requestorId());
 
             for (auto m = begin(masterTable); m!=end(masterTable); ++m) {
                 DPRINTF(ATP, "\t entry for address %#X, size %d\n",
@@ -502,9 +500,9 @@ void ProfileGen::update() {
     //  loop until all masters are busy or all ATP packets are depleted
     auto i = toServe.begin();
     while (!localBuffer.empty() && !toServe.empty()) {
-        MasterID mId = i->first;
+        RequestorID mId = i->first;
         PortID pId = i->second;
-        string master = system->getMasterName(mId);
+        string master = system->getRequestorName(mId);
         // save current iterator and increment i, wrap at the end
         auto current = i++;
         if (i == toServe.end()) i = toServe.begin();
@@ -639,7 +637,7 @@ void ProfileGen::recordAtpStats() {
     // record ATP stats
     for (auto&m : interface) {
         const TrafficProfiles::Stats s = tpm.getMasterStats(
-                system->getMasterName(m.first));
+                system->getRequestorName(m.first));
         atpSent[m.second] = s.sent;
         atpReceived[m.second] = s.received;
         atpSendRate[m.second] = s.sendRate();
@@ -765,7 +763,7 @@ void ProfileGen::regStats() {
 
     // register per-master statistics
     for (auto&m : interface) {
-        const string master = system->getMasterName(m.first);
+        const string master = system->getRequestorName(m.first);
         numRetries.subname(m.second, master);
         retryTime.subname(m.second, master);
         bufferedCount.subname(m.second, master);
