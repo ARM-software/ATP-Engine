@@ -13,13 +13,15 @@
 #include "debug/ATP.hh"
 #include "enums/ByteOrder.hh"
 #include "gem5/profile_gen.hh"
-#include "params/ATPDevice.hh"
+
+// See same import statement in profile_gen.cc for rationale
+using namespace gem5;
 
 namespace ATP {
 
-Device::Device(const ATPDeviceParams *params)
-    : AmbaDmaDevice(params, 0x1000), adapter(params->adapter),
-      atpId(params->atp_id), sid(params->sid), ssid(params->ssid),
+Device::Device(const Params &p)
+    : AmbaDmaDevice(p, 0x1000), adapter(p.adapter),
+      atpId(p.atp_id), sid(p.sid), ssid(p.ssid),
       streamNameRead([this]{ streamNameHandler(); }, name()) { }
 
 AddrRangeList
@@ -212,7 +214,7 @@ Device::servedRequestHandler(const uint64_t str_id, const uint32_t req_id) {
 void
 Device::annotateRequest(RequestPtr req, const uint32_t task_id) {
     req->setStreamId(sid);
-    req->setSubStreamId(ssid);
+    req->setSubstreamId(ssid);
     req->taskId(task_id);
 }
 
@@ -298,8 +300,3 @@ Device::Registers::unexpectedAddr(const Addr addr) const {
 }
 
 } // namespace ATP
-
-ATP::Device *
-ATPDeviceParams::create() {
-    return new ATP::Device(this);
-}

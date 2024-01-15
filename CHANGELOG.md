@@ -3,7 +3,16 @@
 This document lists the version history of the software and describes relevant changes introduced in each version.
 Versions are ordered from most to less recent.
 
-## Version 3.1 (03/02/2020)
+## Version 3.2 (06/02/2024)
+
+- New ProfileDescriptor field (flowID) representing MPAM Partition ID has been added as optional field to traffic profile configuration files; Added example configuration using new flowID field
+- Use gem5 PartitionFieldsExtension extension to store flowIDs in generated packets
+- Consolidated internal packet metadata tagging functionality into PacketTagger
+- Bump C++ version used to 17 to retain compatibility with current libabseil and protobuf
+- Add gem5 v22.0+ compatibility; drop gem5 v20.1 support; note that gem5 v23.1+ is required to map flowIDs to PartitionFieldsExtensions
+- Updated documentation file to show new features
+
+## Version 3.1 (03/02/2020)
 
 - `ATPDevice` gem5 model is a programmable device enabling run-time configuration of traffic generation
   - Supports generation of [DeviceTree](https://www.devicetree.org/) entry for discovery by Linux

@@ -18,7 +18,7 @@ PROTOBUF_C_FLAGS:= $(shell pkg-config --cflags protobuf)
 CPPUNIT_C_FLAGS := $(shell pkg-config --cflags cppunit)
 PROTOBUF_L_FLAGS:= $(shell pkg-config --libs protobuf)
 CPPUNIT_L_FLAGS	:= $(shell pkg-config --libs cppunit)
-CXX_FLAGS       := $(PROTOBUF_C_FLAGS) -std=c++11 -Wall -Werror -Wextra -Wno-unused-parameter -Wno-unused-variable $(CPPUNIT_C_FLAGS) -fPIC $(EXTRA_CXX_FLAGS)
+CXX_FLAGS       := $(PROTOBUF_C_FLAGS) -std=c++17 -Wall -Werror -Wextra -Wno-unused-parameter -Wno-unused-variable $(CPPUNIT_C_FLAGS) -fPIC $(EXTRA_CXX_FLAGS)
 LD_FLAGS        := $(PROTOBUF_L_FLAGS) $(CPPUNIT_L_FLAGS) $(EXTRA_LD_FLAGS)
 PROTO_SRC_DIR   := ./proto/
 PROTO_SRC       := $(wildcard $(PROTO_SRC_DIR)tp*.proto)

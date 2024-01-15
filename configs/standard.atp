@@ -10,7 +10,7 @@ profile {
   master_id: "ALPHA"
   fifo {
     Full: 10000
-    FrameSize: 2000
+    FrameSize: "2KB"
     Rate: "20MBps"
   }
   pattern {

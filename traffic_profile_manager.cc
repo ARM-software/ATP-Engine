@@ -195,11 +195,9 @@ TrafficProfileManager::masterName(const uint64_t mId) const {
 
 const unordered_set<string>
 TrafficProfileManager::getMasters() const {
-
     unordered_set<string> ret (masters.begin(),
-            masters.end());
-
-    return ret;
+                masters.end());
+        return ret;
 }
 
 const Stats TrafficProfileManager::getMasterStats(const string& m) {
@@ -278,20 +276,20 @@ void TrafficProfileManager::loadTaggerConfiguration(const Configuration& c) {
     // file. In case TPM was already initialized, the configuration can only extend
     // the existing range
     if (c.has_lowid()) {
-        tagger.lowId =
+        tagger.low_id =
                 (!initialized) ?
-                        c.lowid() : min(tagger.lowId, c.lowid());
+                        c.lowid() : min(tagger.low_id, c.lowid());
     }
 
     if (c.has_highid()) {
-        tagger.highId =
+        tagger.high_id =
                 (!initialized) ?
-                        c.highid() : max(tagger.highId, c.highid());
+                        c.highid() : max(tagger.high_id, c.highid());
     }
 
     LOG("TrafficProfileManager::loadPacketIDConfiguration",
             (initialized ? "Initialising" : "Extending"),
-            "packet ID boundaries to", tagger.lowId, tagger.highId);
+            "packet ID boundaries to", tagger.low_id, tagger.high_id);
 }
 
 void TrafficProfileManager::loadTracerConfiguration(const Configuration& c) {
@@ -1570,8 +1568,8 @@ uint64_t TrafficProfileManager::cloneStream(const uint64_t root,
   const uint64_t cloneNum { clonedStreams.at(root).first };
   for (auto& p : getStream(root)) {
     // profile pointer
-    auto* from { getProfile(p.first) };
-    const auto &ts { timeScaleFactor.at(p.first) };
+    auto* from = getProfile(p.first);
+    const auto &ts = timeScaleFactor.at(p.first);
     // build profile from source config
     configureProfile(*from->getConfig(), ts, false, cloneNum, master_id);
     // store clone root

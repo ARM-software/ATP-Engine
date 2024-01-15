@@ -34,14 +34,14 @@ protected:
     uint64_t sent;
     //! AMBA Traffic Profiles FIFO model
     Fifo fifo;
-    //! AMBA TP Packet Descriptor
-    PacketDesc packetDesc;
     //! Buffer for pending Packet. If the FIFO is full, a packet could be pended here for later transmission
     Packet* pending;
     //! flag to signal checkers' FIFOs have been activated
     bool checkersFifoStarted;
     //! flag to signal the profile is halted - i.e. all operations suspended
     bool halted;
+    //! AMBA TP Packet Descriptor
+    PacketDesc packetDesc;
 
 public:
 

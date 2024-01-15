@@ -225,7 +225,7 @@ void Logger::log(const Level lvl, Tail&&... args) {
         default: break;
         }
         // start recursive body
-        _log(lvl,forward<Tail>(args)...);
+        _log(lvl,std::forward<Tail>(args)...);
     }
 }
 
@@ -233,15 +233,15 @@ void Logger::log(const Level lvl, Tail&&... args) {
 template <class T, class ...Tail>
 void Logger::_log(const Level lvl,T head, Tail&&... tail){
     *(get()->out) << " " << head ;
-    _log(lvl, forward<Tail>(tail)...);
+    _log(lvl, std::forward<Tail>(tail)...);
 }
 
 
 // global logger macros - change LOG_LEVEL to hard code verbosity
 #define LOG_LEVEL Logger::ERROR_LEVEL
 #define ERROR(...)  do { if (Logger::get()->getLevel()<=Logger::ERROR_LEVEL) \
-        Logger::get()->log(Logger::ERROR_LEVEL,__VA_ARGS__); \
-        if (Logger::get()->getExitOnErrors()) exit(1); } while (false)
+        { Logger::get()->log(Logger::ERROR_LEVEL,__VA_ARGS__); \
+        if (Logger::get()->getExitOnErrors()) exit(1); } } while (false)
 #define WARN(...)   do { if (Logger::get()->getLevel()<=Logger::WARNING_LEVEL) \
         Logger::get()->log(Logger::WARNING_LEVEL,__VA_ARGS__); } while (false)
 #define LOG(...)    do { if (Logger::get()->getLevel()<=Logger::DEBUG_LEVEL) \

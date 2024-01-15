@@ -10,9 +10,9 @@ Import('*')
 
 # Only build the traffic generator if we have support for protobuf as the
 # tracing relies on it
-if env['HAVE_PROTOBUF']:
-    SimObject('ProfileGen.py')
-    SimObject('ATPDevice.py')
+if env['CONF']['HAVE_PROTOBUF']:
+    SimObject('ProfileGen.py', sim_objects=['ProfileGen'])
+    SimObject('ATPDevice.py', sim_objects=['ATPDevice'])
     Source('profile_gen.cc')
     Source('atp_device.cc')
     DebugFlag('ATP')

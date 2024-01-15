@@ -78,12 +78,12 @@ void PacketTracer::trace(const Packet* const pkt) {
         const double timeScale =
                 tpm->toFrequency(tpm->getTimeResolution())/tpm->toFrequency(timeUnit);
 
-        auto trace_prefix {
+        auto trace_prefix =
             [pkt, timeScale](std::ofstream &out) -> std::ofstream & {
                 out << static_cast<double>(pkt->time()) / timeScale << " "
                     << " 0x" << std::hex << pkt->addr() << std::dec << " ";
                 return out;
-        } };
+        };
 
         // write the time trace point
         trace_prefix(masterTraces[pkt->cmd()]) << pkt->size() << std::endl;

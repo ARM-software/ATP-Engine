@@ -123,7 +123,7 @@ Shell::tryEnableRichMode()
         return false;
     }
 
-    struct termios shell_term { origTerm };
+    struct termios shell_term = origTerm;
     // See termios man page
     shell_term.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR |
                             IGNCR | ICRNL | IXON);
@@ -303,9 +303,9 @@ Shell::complete(Line &line, const string &elem, Completions& compls) const
     // Discard non-fitting Completions for the current element
     size_t pos { 0 };
     while (pos < elem.size() && !compls.empty()) {
-        auto comp_it { compls.begin() };
+        auto comp_it = compls.begin();
         while (comp_it != compls.end()) {
-            const string &comp { (*comp_it).get() };
+            const string &comp = (*comp_it).get();
             if (pos >= comp.size() || elem[pos] != comp[pos])
                 comp_it = compls.erase(comp_it);
             else

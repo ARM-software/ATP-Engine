@@ -18,8 +18,10 @@
 #include <algorithm>
 #include <cassert>
 #include "traffic_profile_desc.hh"
+#include "packet_tagger.hh"
 #include "utilities.hh"
 #include "kronos.hh"
+#include "types.hh"
 
 #ifndef CPPUNIT_ASSERT
 #define CPPUNIT_ASSERT(x)
@@ -75,6 +77,12 @@ TestAtp::makeProfile(Profile *p, const ProfileDescription &desc) const {
             p->add_wait_for(a);
         }
     }
+
+    if (desc.iommu_id)
+        p->set_iommu_id(desc.iommu_id);
+
+    if (desc.flow_id)
+         p->set_flow_id(desc.flow_id);
 }
 
 // test specific functions
@@ -332,6 +340,8 @@ void TestAtp::testAtp_packetDesc() {
     makePatternConfiguration(config.mutable_pattern(),
             Command::READ_REQ, Command::READ_RESP);
 
+    // ATP Packet Tagger
+    PacketTagger pt;
 
     // configure the packet address and size generation policies
     auto* pk = config.mutable_pattern();
@@ -345,7 +355,7 @@ void TestAtp::testAtp_packetDesc() {
     pk->set_highid(11);
 
     // initialize the Packet Descriptor and checks if initialized correctly
-    pd.init(0, *config.mutable_pattern());
+    pd.init(0, *config.mutable_pattern(), &pt);
     CPPUNIT_ASSERT(pd.isInitialized());
     CPPUNIT_ASSERT(pd.waitingFor() == Command::READ_RESP);
 
@@ -428,14 +438,14 @@ void TestAtp::testAtp_packetDesc() {
     pk->mutable_address()->set_increment(10);
     stride->set_increment(64);
     stride->set_range("640");
-    pd.init(0, *pk);
+    pd.init(0, *pk, &pt);
 
     // test that the range is 640 times the strides (10) times the increment
     CPPUNIT_ASSERT(pd.autoRange(100)==6400);
 
     // reduce the increment to  and test the autoRange again
     address->set_increment(640);
-    pd.init(0, *pk);
+    pd.init(0, *pk, &pt);
     pd.autoRange(100);
 
     Packet * p(nullptr);
@@ -446,6 +456,81 @@ void TestAtp::testAtp_packetDesc() {
         CPPUNIT_ASSERT(p->addr() == i*64);
         delete p;
     }
+}
+
+void TestAtp::testAtp_packetTagger(){
+    // instatiate packet to be tagged
+    Packet* packet = new Packet();
+
+    // setup tagger to perform tagging
+    PacketTagger * tagger = new PacketTagger();
+
+
+    // verify packet metadata blank before tagging
+    CPPUNIT_ASSERT(packet->has_flow_id() == false);
+    CPPUNIT_ASSERT(packet->has_iommu_id() == false);
+    CPPUNIT_ASSERT(packet->has_stream_id() == false);
+
+    // attempt to tag before setting up packet tagger metadata vars
+    // -> should cause no effect
+    tagger->tagPacket(packet);
+    CPPUNIT_ASSERT(packet->has_flow_id() == false);
+    CPPUNIT_ASSERT(packet->has_iommu_id() == false);
+    CPPUNIT_ASSERT(packet->has_stream_id() == false);
+
+    // configure packet tagger correctly and check with several values
+    for (uint64_t i : {0, 1, 2}){
+        delete packet;
+        packet = new Packet();
+
+        tagger->flow_id = tagger->stream_id = i;
+        tagger->iommu_id = static_cast<uint32_t>(i);
+        tagger->tagPacket(packet);
+
+        // check if packet is tagged correctly
+        CPPUNIT_ASSERT(packet->flow_id() == i);
+        CPPUNIT_ASSERT(packet->stream_id() == i);
+        CPPUNIT_ASSERT(packet->iommu_id() == static_cast<uint32_t>(i));
+    }
+
+    // save last iteration values to check them later
+    uint64_t test_flow_id = tagger->flow_id,
+             test_stream_id = tagger->stream_id,
+             offset = 10;
+    uint32_t test_iommu_id = tagger->iommu_id;
+
+    // attempt to retag packet with different values
+    tagger->flow_id = tagger->flow_id + offset;
+    tagger->iommu_id = tagger->iommu_id + offset;
+    tagger->stream_id = tagger->stream_id + offset;
+    tagger->tagPacket(packet);
+
+    // Old values should not be retained
+    CPPUNIT_ASSERT(packet->flow_id() != test_flow_id);
+    CPPUNIT_ASSERT(packet->iommu_id() != test_iommu_id);
+    CPPUNIT_ASSERT(packet->stream_id() != test_stream_id);
+
+    // New values should be written to packet
+    CPPUNIT_ASSERT(packet->flow_id() == (test_flow_id + offset));
+    CPPUNIT_ASSERT(packet->iommu_id() == (test_iommu_id + offset));
+    CPPUNIT_ASSERT(packet->stream_id() == (test_stream_id + offset));
+
+    // attempt to tag with invalid values
+    tagger->flow_id  = tagger->stream_id = InvalidId<uint64_t>();
+    tagger->iommu_id = InvalidId<uint32_t>();
+
+    delete packet;
+    packet = new Packet();
+    tagger->tagPacket(packet);
+
+    // Invalid values should not be written to packet
+    CPPUNIT_ASSERT(packet->has_flow_id() == false);
+    CPPUNIT_ASSERT(packet->has_iommu_id() == false);
+    CPPUNIT_ASSERT(packet->has_stream_id() == false);
+
+    // cleanup test
+    delete tagger;
+    delete packet;
 }
 
 void TestAtp::testAtp_stats() {
@@ -532,7 +617,7 @@ void TestAtp::testAtp_trafficProfile() {
     // remove the wait for field from the config object
     config.clear_wait_for();
     // delete the packet configuration from the config object
-    config.release_pattern();
+    config.clear_pattern();
     // change name
     config.set_name("testAtp_trafficProfile_checker");
     // set the checker to monitor test_profile
@@ -592,6 +677,70 @@ void TestAtp::testAtp_trafficProfile() {
     // test packet is now sent
     CPPUNIT_ASSERT(wait->send(locked, p, next));
     CPPUNIT_ASSERT(!locked);
+}
+
+void TestAtp::testAtp_packetTaggerCreation(){
+    // setup test metadata fields
+    const uint64_t test_iommu_id = 0, test_flow_id = 1, test_stream_id = 2;
+
+    // packet tagger should be created when profle_desc constructor is called
+    // and flow_id and/or iommu_id are set
+    ProfileDescription profDesc = ProfileDescription{
+                                    "testAtp_tagger_creation_1", Profile::READ,
+                                    nullptr, nullptr};
+    profDesc.iommu_id = test_iommu_id;
+    profDesc.flow_id = test_flow_id;
+
+    Profile config;
+    makeProfile(&config, profDesc);
+
+    // configure required ProfileDesc properties for it to be a Master and
+    // register it with the TPM
+    makeFifoConfiguration(config.mutable_fifo(), 1000,
+        FifoConfiguration::EMPTY, 1, 1, 10);
+
+    PatternConfiguration* pk = makePatternConfiguration(
+        config.mutable_pattern(),
+        Command::READ_REQ, Command::READ_RESP
+    );
+
+    pk->set_size(64);
+    PatternConfiguration::Address* address = pk->mutable_address();
+    address->set_base(0);
+    address->set_increment(0);
+    tpm->configureProfile(config);
+
+    // profile streamId should be invalid; still to be been added to stream
+    TrafficProfileDescriptor* profile = tpm->profiles.at(0);
+    CPPUNIT_ASSERT(!isValid(profile->_streamId));
+
+    // extract packet tagger and check metadata values
+    PacketTagger* taggerPop = profile->packetTagger;
+    Packet* packet = new Packet();
+    taggerPop->tagPacket(packet);
+
+    CPPUNIT_ASSERT(packet->has_stream_id() == false);
+    CPPUNIT_ASSERT(packet->iommu_id() == test_iommu_id);
+    CPPUNIT_ASSERT(packet->flow_id() == test_flow_id);
+    delete packet;
+
+    // packet tagger should not be recreated if profile_desc has existing
+    // tagger and addToStream is called after; streamId should be added to
+    // existing tagger
+    profile->addToStream(test_stream_id);
+    // check whether streamId is correctly set
+    CPPUNIT_ASSERT(isValid(profile->_streamId));
+    CPPUNIT_ASSERT(profile->_streamId == test_stream_id);
+
+    // packet tagger should have been updated to reflect new value for streamId
+    packet = new Packet();
+    taggerPop->tagPacket(packet);
+
+    // old metadata values should be intact
+    CPPUNIT_ASSERT(packet->stream_id() == test_stream_id);
+    CPPUNIT_ASSERT(packet->iommu_id() == test_iommu_id);
+    CPPUNIT_ASSERT(packet->flow_id() == test_flow_id);
+    delete packet;
 }
 
 void
@@ -788,10 +937,10 @@ TestAtp::testAtp_tpm() {
 
     /* uniqueStream */
     config_0.add_wait_for(profile_0 + " ACTIVATION");
-    auto reset { [this, &config_0, &config_1]() {
+    auto reset = [this, &config_0, &config_1]() {
         tpm->reset();
         tpm->configureProfile(config_0); tpm->configureProfile(config_1);
-    } };
+    };
     /* 1. First usage should return Root Profile ID of Original */
     reset(); tpm->streamCacheUpdate();
     uint64_t orig_id { tpm->profileId(profile_0) };
@@ -815,16 +964,16 @@ TestAtp::testAtp_tpm() {
     CPPUNIT_ASSERT(orig_id != clone1_id); CPPUNIT_ASSERT(orig != clone1);
     CPPUNIT_ASSERT(clone0_id != clone1_id); CPPUNIT_ASSERT(clone0 != clone1);
     /* 3. Clone state should be independent */
-    auto diff_conf { [this](const uint64_t id0, const uint64_t id1) {
+    auto diff_conf = [this](const uint64_t id0, const uint64_t id1) {
         tpm->addressStreamReconfigure(id0, 0x11, 0x123, Profile::READ);
         tpm->addressStreamReconfigure(id1, 0xFF, 0x321, Profile::READ);
-    } };
+    };
     /* 3.1 Original activated, one Packet per send, Original terminated,
            Clones not terminated */
     diff_conf(orig_id, clone0_id); orig->activate();
     locked = false ; next = time = 0;
     for (uint64_t txn { 0 }; txn < config_0.fifo().total_txn(); ++txn) {
-        auto packets { tpm->send(locked, next, time) };
+        auto packets = tpm->send(locked, next, time);
         CPPUNIT_ASSERT(packets.size() == 1);
         for (auto &packet : packets) {
             Packet *p { packet.second }; p->set_cmd(Command::READ_RESP);
@@ -849,7 +998,7 @@ TestAtp::testAtp_tpm() {
     diff_conf(orig_id, clone0_id); orig->activate(); clone0->activate();
     locked = false ; next = time = 0;
     for (uint64_t txn { 0 }; txn < config_0.fifo().total_txn(); ++txn) {
-        auto packets { tpm->send(locked, next, time) };
+        auto packets = tpm->send(locked, next, time);
         CPPUNIT_ASSERT(packets.size() == 2);
         Packet *p0 { packets.begin()->second },
                *p1 { (++packets.begin())->second };
@@ -867,7 +1016,7 @@ TestAtp::testAtp_tpm() {
     }
     // Handle remaining transactions
     for (uint64_t txn { 0 }; txn < config_1.fifo().total_txn(); ++txn) {
-        auto packets { tpm->send(locked, next, time) };
+        auto packets = tpm->send(locked, next, time);
         CPPUNIT_ASSERT(packets.size() == 2);
         for (auto &packet : packets) {
             Packet *p { packet.second }; p->set_cmd(Command::READ_RESP);
@@ -889,7 +1038,7 @@ TestAtp::testAtp_tpm() {
     orig->activate(); clone0->activate();
     locked = false ; next = time = 0;
     for (uint64_t txn { 0 }; txn < 16; ++txn) {
-        auto packets { tpm->send(locked, next, time) };
+        auto packets = tpm->send(locked, next, time);
         for (auto &packet : packets) {
             Packet *p { packet.second }; p->set_cmd(Command::READ_RESP);
             tpm->receive(time, p);
@@ -1281,47 +1430,55 @@ CppUnit::TestSuite* TestAtp::suite() {
     CppUnit::TestSuite* suiteOfTests = new CppUnit::TestSuite("TestAtp");
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test0 - Tests the ATP FIFO",
+            "Test 0 - Tests the ATP FIFO",
             &TestAtp::testAtp_fifo ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test1 - Tests the ATP Event",
+            "Test 1 - Tests the ATP Event",
             &TestAtp::testAtp_event ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test2 - Tests the ATP Packet Descriptor",
+            "Test 2 - Tests the ATP Packet Descriptor",
             &TestAtp::testAtp_packetDesc ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test3 - Tests the ATP Stats object",
+            "Test 3 - Tests the ATP Packet Tagger for tagging metadata fields",
+            &TestAtp::testAtp_packetTagger ));
+
+    suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
+            "Test 4 - Tests the ATP Stats object",
             &TestAtp::testAtp_stats ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test4 - Tests the ATP Traffic Profile",
+            "Test 5 - Tests the ATP Traffic Profile",
             &TestAtp::testAtp_trafficProfile ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test5 - Tests the ATP Traffic Profile Manager",
+            "Test 6 - Tests creation logic for ATP Packet Tagger",
+            &TestAtp::testAtp_packetTaggerCreation ));
+
+    suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
+            "Test 7 - Tests the ATP Traffic Profile Manager",
             &TestAtp::testAtp_tpm ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test6 - Tests the ATP Traffic Profile Delay",
+            "Test 8 - Tests the ATP Traffic Profile Delay",
             &TestAtp::testAtp_trafficProfileDelay ));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test 7 - Tests the ATP Unit Conversion Utilities",
+            "Test 9 - Tests the ATP Unit Conversion Utilities",
             &TestAtp::testAtp_unitConversion));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test 8 - Tests the Kronos engine",
+            "Test 10 - Tests the Kronos engine",
             &TestAtp::testAtp_kronos));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test 9 - Tests the ATP Traffic Profile Slave",
+            "Test 11 - Tests the ATP Traffic Profile Slave",
             &TestAtp::testAtp_trafficProfileSlave));
 
     suiteOfTests->addTest(new CppUnit::TestCaller<TestAtp>(
-            "Test 10 - Tests the ATP Traffic Profile Manager routing",
+            "Test 12 - Tests the ATP Traffic Profile Manager routing",
             &TestAtp::testAtp_trafficProfileManagerRouting));
 
     return suiteOfTests;

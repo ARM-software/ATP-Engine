@@ -136,19 +136,18 @@ public:
     nextAddress(0), strideN(0), strideInc(0), strideRange(0),
     strideStart(0), strideCount(0), strides(0) {}
 
-    //! Default Destructor
-    virtual ~PacketDesc();
-
     //! Resets the packet descriptor to its initial state
     virtual void reset();
 
     /*!
-     * Initialises the descriptor with data form the Google Protocol Buffer configuration
+     * Initialises the descriptor with data from the Google Protocol Buffer configuration
      * object
      *\param parentId the unique ID of the parent Traffic Profile
      *\param from constant reference to the Google Protocol Buffer configuration object
+     *\param parentTagger reference to parent class PacketTagger; Can be nullptr if configuration
+     * has no lowId and highId
      */
-    void init(const uint64_t, const PatternConfiguration&);
+    void init(const uint64_t, const PatternConfiguration&, PacketTagger* parentTagger);
     /*! Request to get a new packet from the descriptor,
      * it can return false if the packet descriptor is not configure to generate
      * packets
