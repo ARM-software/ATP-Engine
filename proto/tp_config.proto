@@ -261,6 +261,8 @@ message Profile {
     repeated string check = 9;
     // Master IOMMU unique identifier
     optional uint32 iommu_id = 10;
+    //  MPAM PARTID
+    optional uint64 flow_id = 11;
 }
 
 message Configuration {

@@ -20,9 +20,9 @@
 #include "base/types.hh"
 #include "dev/arm/amba_device.hh"
 #include "mem/packet.hh"
+#include "params/ATPDevice.hh"
 #include "sim/eventq.hh"
 
-class ATPDeviceParams;
 class ProfileGen;
 
 namespace ATP {
@@ -32,13 +32,14 @@ namespace ATP {
  * Generic ATP device. Provides MMIO programmability and ATP APIs
  * access from system software.
  */
-class Device : public AmbaDmaDevice {
+class Device : public gem5::AmbaDmaDevice {
   public:
-    Device(const ATPDeviceParams *params);
+    PARAMS(gem5::ATPDevice);
+    Device(const Params &p);
 
   protected:
     //! MMIO registers offsets
-    enum Offset : Addr {
+    enum Offset : gem5::Addr {
         //! Stream name address base
         STREAM_NAME_BASE  = 0x00,
         //! Stream name address range
@@ -82,12 +83,12 @@ class Device : public AmbaDmaDevice {
         std::bitset<8> control;
         uint8_t status;
 
-        static const std::unordered_map<Addr, const char *> names;
+        static const std::unordered_map<gem5::Addr, const char *> names;
 
-        void readOnly(const Addr addr) const;
-        void writeOnly(const Addr addr) const;
-        void invalidSize(const Addr addr, const unsigned size) const;
-        void unexpectedAddr(const Addr addr) const;
+        void readOnly(const gem5::Addr addr) const;
+        void writeOnly(const gem5::Addr addr) const;
+        void invalidSize(const gem5::Addr addr, const unsigned size) const;
+        void unexpectedAddr(const gem5::Addr addr) const;
     } regs;
 
     //! Play Stream API request
@@ -114,7 +115,7 @@ class Device : public AmbaDmaDevice {
     const uint32_t ssid;
 
     //! Stream name read DMA operation completion event
-    EventFunctionWrapper streamNameRead;
+    gem5::EventFunctionWrapper streamNameRead;
     //! Stream name storage buffer
     std::vector<uint8_t> streamNameBuffer;
 
@@ -127,11 +128,11 @@ class Device : public AmbaDmaDevice {
     bool intAckPending{ false };
 
     //! Provides device address ranges
-    AddrRangeList getAddrRanges() const override;
+    gem5::AddrRangeList getAddrRanges() const override;
     //! MMIO read handler
-    Tick read(PacketPtr pkt) override;
+    gem5::Tick read(gem5::PacketPtr pkt) override;
     //! MMIO write handler
-    Tick write(PacketPtr pkt) override;
+    gem5::Tick write(gem5::PacketPtr pkt) override;
 
     //! Play Stream API handler
     /*! Builds a new request. If no pending requests, serves it */
@@ -147,7 +148,7 @@ class Device : public AmbaDmaDevice {
     void servedRequestHandler(const uint64_t str_id, const uint32_t req_id);
     //! Callback for when a request is issued from the adapter
     /*! Annotates IOMMU IDs and request task ID */
-    void annotateRequest(RequestPtr req, const uint32_t task_id);
+    void annotateRequest(gem5::RequestPtr req, const uint32_t task_id);
 
     //! Interrupt acknowledgment handler
     /*! Clears interrupt and if possible notifies next served request */

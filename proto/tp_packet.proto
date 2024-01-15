@@ -27,4 +27,5 @@ message Packet {
   required uint64 uid = 7 [default = 0];
   optional uint64 stream_id = 8;
   optional uint32 iommu_id = 9;
+  optional uint64 flow_id = 10;
 }

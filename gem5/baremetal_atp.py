@@ -11,7 +11,7 @@ Official script for use with meta-atp Yocto layer
 from m5 import options
 from m5.objects import *
 from m5.util import addToPath
-from optparse import OptionParser
+from argparse import ArgumentParser
 from os import getenv
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -44,13 +44,10 @@ def create(args):
     CpuClass, mem_mode, _ = Simulation.setCPUClass(args)
     sys_cfg = Benchmarks.SysConfig(args.script, args.mem_size)
     system = FSConfig.makeArmSystem(mem_mode, "VExpress_GEM5_V2",
-                                    args.num_cpus, sys_cfg, bare_metal=True,
-                                    security=True)
+                                    args.num_cpus, sys_cfg, bare_metal=True)
     system.voltage_domain = VoltageDomain(voltage=args.sys_voltage)
     system.clk_domain = SrcClockDomain(clock=args.sys_clock,
                                        voltage_domain=system.voltage_domain)
-    system.highest_el_is_64 = True
-    system.have_virtualization = True
     system.workload.object_file = args.kernel
     # CPU cluster
     system.cpu_voltage_domain = VoltageDomain()
@@ -60,9 +57,6 @@ def create(args):
                   for i in range(args.num_cpus)]
     for cpu in system.cpu:
         cpu.createThreads()
-        # (gem5 v20.1) Disable FEAT_VHE, prevents booting
-        features = cpu.isa[0].id_aa64mmfr1_el1.getValue()
-        cpu.isa[0].id_aa64mmfr1_el1 = features & ~0xf00
     CacheConfig.config_cache(args, system)
     # Devices
     system.realview.atp_adapter = ProfileGen(config_files=args.atp_file,
@@ -74,11 +68,8 @@ def create(args):
                                            interrupt=ArmSPI(num=104),
                                            atp_id="STREAM")
     system.realview.attachSmmu([system.realview.atp_device], system.membus)
-    # (gem5 v20.1) Ensure 128 CMDQ entries for compatibility from Linux v5.4
-    system.realview.smmu.smmu_idr1 = 0x00E00000
-    # (gem5 v20.2+) Enable SMMUv3 interrupt interface to boot Linux
-    if hasattr(system.realview.smmu, "irq_interface_enable"):
-        system.realview.smmu.irq_interface_enable = True
+    # Enable SMMUv3 interrupt interface to boot Linux
+    system.realview.smmu.irq_interface_enable = True
     connect_adapter(system.realview.atp_adapter, system.realview.smmu)
     if args.disk_image:
         system.disk = [PciVirtIO(vio=VirtIOBlock(image=create_cow_image(disk)))
@@ -91,16 +82,16 @@ def create(args):
     return system
 
 def main():
-    parser = OptionParser(epilog=__doc__)
+    parser = ArgumentParser(epilog=__doc__)
     Options.addCommonOptions(parser)
     Options.addFSOptions(parser)
-    parser.add_option("--atp-file", action="append", type="string",
+    parser.add_argument("--atp-file", action="append", type=str,
                       default=[str(atp_configs_dir / "stream.atp")],
                       help=".atp file to load in Engine")
-    parser.add_option("--dtb-gen", action="store_true",
+    parser.add_argument("--dtb-gen", action="store_true",
                       help="Doesn't run simulation, it generates a DTB only")
-    parser.add_option("--checkpoint", action="store_true")
-    args, _ = parser.parse_args()
+    parser.add_argument("--checkpoint", action="store_true")
+    args = parser.parse_args()
 
     if args.checkpoint:
         script = NamedTemporaryFile()

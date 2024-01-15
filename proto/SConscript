@@ -10,11 +10,8 @@
 Import('*')
 
 # Only build if we have protobuf support
-if env['HAVE_PROTOBUF']:
-	node = {}
-	node['config'] = ProtoBuf('tp_config.proto').tnode
-	node['packet'] = ProtoBuf('tp_packet.proto').tnode
-	node['stats'] = ProtoBuf('tp_stats.proto').tnode
-	# Dependencies
-	Depends(node['config'], node['packet'])
+if env['CONF']['HAVE_PROTOBUF']:
+	ProtoBuf('tp_config.proto')
+	ProtoBuf('tp_packet.proto')
+	ProtoBuf('tp_stats.proto')
 

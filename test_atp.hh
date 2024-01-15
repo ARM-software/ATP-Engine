@@ -52,6 +52,10 @@ class TestAtp : public CppUnit::TestFixture  {
         const Profile::Type type;
         const string *const master;
         const list<string> *const waitFor;
+        // iommu_id and flow_id have no default values in constructor as they
+        // are optional fields
+        uint64_t iommu_id;
+        uint64_t flow_id;
         ProfileDescription(const string &n, const Profile::Type &t,
                            const string *const m=nullptr,
                            const list<string> *const wf=nullptr)
@@ -137,11 +141,17 @@ class TestAtp : public CppUnit::TestFixture  {
     //! tests the ATP packet descriptor
     void testAtp_packetDesc();
 
+    //! tests the ATP packet tagger functionality
+    void testAtp_packetTagger();
+
     //! tests the statistics object
     void testAtp_stats();
 
     //! tests the traffic profile object
     void testAtp_trafficProfile();
+
+    //! tests the ATP packet tagger creation logic
+    void testAtp_packetTaggerCreation();
 
     //! tests the traffic profile manager
     void testAtp_tpm();

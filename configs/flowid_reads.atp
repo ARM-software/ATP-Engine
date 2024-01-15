@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Copyright (c) 2024 ARM Limited
+# All rights reserved
+# Authors: Hristo Belchev
+
+# This configuration features two masters with different flow_ids operating in
+# parallel; Each master reads an address range of 256KiB twice, once to
+# simulate filling up a cache, and once to simulate reading from cache. This
+# profile is intented to test resource partitioning.
+
+profile {
+  type: READ
+  master_id: "READS_1"
+  flow_id: 1
+  fifo {
+    start_fifo_level: EMPTY
+    full_level: 0
+    ot_limit: 30
+    total_txn: 8192
+    rate: "0"
+  }
+  pattern {
+    address {
+      base:       0
+    }
+    stride {
+      Stride:   64
+      Xrange:   "262144B"
+    }
+    size: 64
+  }
+  name: "READS_1"
+}
+
+profile {
+  type: READ
+  master_id: "READS_2"
+  flow_id: 2
+  fifo {
+    start_fifo_level: EMPTY
+    full_level: 0
+    ot_limit: 30
+    total_txn: 8192
+    rate: "0"
+  }
+  pattern {
+    address {
+      base:       262144
+    }
+    stride {
+      Stride:   64
+      Xrange:   "262144B"
+    }
+    size: 64
+  }
+  name: "READS_2"
+}

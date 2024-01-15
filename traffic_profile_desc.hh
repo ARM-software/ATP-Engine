@@ -20,6 +20,7 @@
 #include "logger.hh"
 #include "stats.hh"
 #include "types.hh"
+#include "packet_tagger.hh"
 
 using namespace std;
 
@@ -55,13 +56,19 @@ namespace TrafficProfiles {
     protected:
         //! traffic profile configuration
         const Profile* config;
-
         //! Traffic Profile Role
         Role role;
         //! Traffic Profile Type
         const Profile::Type type;
         //! pointer to parent TPM
         TrafficProfileManager* const tpm;
+        /*!
+        *\brief Packet tagger module
+        *
+        * Sets generated packet fields according to
+        * local Packet Descriptor configuration
+        */
+        PacketTagger* packetTagger {nullptr};
         //! Traffic Profile unique ID
         const uint64_t id;
         //! Traffic Profile Name
@@ -94,6 +101,7 @@ namespace TrafficProfiles {
         set<uint64_t> checkers;
 
     public:
+        friend class TestAtp;
 
         /*!
          *\brief Parses a rate configuration parameter
@@ -189,7 +197,8 @@ namespace TrafficProfiles {
         virtual void addToMaster(const uint64_t, const string&);
 
         /*!
-         * Adds the Traffic Profile Descriptor to a Stream
+         * Adds the Traffic Profile Descriptor to a Stream and updates local
+         * PacketTagger to tag outgoing packets with new stream_id
          *\param stream_id Stream Root Traffic Profile ID
          */
         virtual void addToStream(const uint64_t stream_id);

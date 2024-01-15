@@ -15,7 +15,7 @@
 namespace TrafficProfiles {
 
 template<typename T>
-constexpr T InvalidId() { return numeric_limits<T>::max(); }
+constexpr T InvalidId() { return std::numeric_limits<T>::max(); }
 
 template<typename T>
 constexpr bool isValid(const T id) { return id != InvalidId<T>(); }

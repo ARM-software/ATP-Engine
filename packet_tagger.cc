@@ -12,21 +12,20 @@
 
 namespace TrafficProfiles {
 
-PacketTagger::PacketTagger():currentId(0), currentUid(0), lowId(0), highId(0) {
-
-}
+// Packet metadata defaults set in header
+PacketTagger::PacketTagger(): currentId(0), low_id(0), high_id(0) {}
 
 PacketTagger::~PacketTagger() {
 }
 
 uint64_t
 PacketTagger::getId() {
-    if (currentId<lowId){
-        currentId=lowId;
+    if (currentId<low_id){
+        currentId=low_id;
     }
     // wrap to low in case of high threshold reached
-    if (currentId > highId) {
-        currentId = lowId;
+    if (currentId > high_id) {
+        currentId = low_id;
     }
 
     LOG("PacketTagger::getId generated ID",currentId);
@@ -42,16 +41,32 @@ PacketTagger::getUid() {
 }
 
 void
-PacketTagger::tag(Packet* pkt) {
-    // tags the passed packet
-
-     // set PacketID if not already set
-    if (!pkt->has_id()) {
-        pkt->set_id(getId());
-    }
-
+PacketTagger::tagGlobalPacket(Packet* pkt) {
     // global UID is always overwritten
     pkt->set_uid(getUid());
+}
+
+void
+PacketTagger::tagPacket(Packet* pkt) {
+    // set profile Packet flow_id if availalbe
+    if (isValid(this->flow_id))
+        pkt->set_flow_id(flow_id);
+
+    // set profile Packet iommu_id if availalbe
+    if (isValid(this->iommu_id))
+        pkt->set_iommu_id(iommu_id);
+
+    // set profile Packet stream_id if availalbe
+    if (isValid(this->stream_id))
+        pkt->set_stream_id(stream_id);
+
+    // check if profile has low and high ids to support tagging packets for Packet Desc
+    if (isValid(this->low_id) && isValid(this->high_id)){
+        // set profile PacketID if not already set
+        if (!pkt->has_id()) {
+            pkt->set_id(getId());
+        }
+    }
 }
 
 } /* namespace TrafficProfiles */

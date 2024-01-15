@@ -23,11 +23,11 @@ TrafficProfileMaster::TrafficProfileMaster(TrafficProfileManager* manager,
         checkersFifoStarted(false),
         halted (false) {
 
-        // Initialise the packet descriptor
+        // Configure the packet descriptor
         if (p->has_pattern()) {
             LOG("TrafficProfileMaster [", this->name,
                     "] Initialising pattern descriptor");
-            packetDesc.init(id, p->pattern());
+            packetDesc.init(id, p->pattern(), this->packetTagger);
             // configure packet descriptor command if not done
             // so in the Pattern Section
             if (packetDesc.command() == Command::INVALID) {
@@ -185,12 +185,12 @@ bool TrafficProfileMaster::send(bool& locked, Packet*& p, uint64_t& next) {
             if (fifo.send(underrun, overrun, next, request_time, t, pending->size())) {
                 // tag packet with masterId, streamId and masterIommuId
                 pending->set_master_id(masterName);
-                if (isValid(_streamId))
-                    pending->set_stream_id(_streamId);
-                if (isValid(_masterIommuId))
-                    pending->set_iommu_id(_masterIommuId);
                 // request TPM to tag this packet
                 tpm->tag(pending);
+                // request Packet Tagger to tag this packet with profile metadata
+                // if tagger is available
+                if (this->packetTagger != nullptr)
+                    this->packetTagger->tagPacket(pending);
 
                 // update number of outstanding transaction if needed
                 if (packetDesc.waitingFor() != Command::NONE) {

@@ -10,7 +10,7 @@ Import('*')
 
 # Only build the traffic generator if we have support for protobuf as the
 # tracing relies on it
-if env['HAVE_PROTOBUF']:
+if env['CONF']['HAVE_PROTOBUF']:
     Source('traffic_profile_manager.cc')
     Source('traffic_profile_desc.cc')
     Source('traffic_profile_master.cc')

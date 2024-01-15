@@ -63,12 +63,29 @@ TrafficProfileDescriptor::TrafficProfileDescriptor(
         }
     }
 
+    // Initialise packet tagger with protobuf config if required for metadata
+    if (p->has_flow_id() || p->has_iommu_id() || p->has_pattern()) {
+        packetTagger = new PacketTagger();
+        // check for configured flow_id and add it to the Packet Tagger
+        if (p->has_flow_id()){
+            packetTagger->flow_id = p->flow_id();
+            LOG("TrafficProfileDescriptor [", this->name, "] uses ", p->flow_id(), " as flow_id");
+        }
+
+        // check for configured iommu_id and add it to the Packet Tagger
+        if (p->has_iommu_id()){
+            packetTagger->iommu_id = p->iommu_id();
+            LOG("TrafficProfileDescriptor [", this->name, "] uses ", p->iommu_id(), " as iommu_id");
+        }
+    }
+
     // configure time scale in stats using the global time resolution
     stats.timeScale = tpm->toFrequency(tpm->getTimeResolution());
 }
 
 TrafficProfileDescriptor::~TrafficProfileDescriptor() {
-
+    if (this->packetTagger != nullptr)
+        delete this->packetTagger;
 }
 
 void TrafficProfileDescriptor::reset() {
@@ -90,9 +107,19 @@ void TrafficProfileDescriptor::addToMaster(const uint64_t mId,
 }
 
 void TrafficProfileDescriptor::addToStream(const uint64_t stream_id) {
-    _streamId = stream_id;
-
-    LOG("TrafficProfileDescriptor::", __func__, "[", this->name, "] added to", _streamId);
+    // check stream_id validity
+    if (isValid(stream_id)){
+        this->_streamId = stream_id;
+        // create packetTagger in case not instantiated
+        if (packetTagger == nullptr)
+            packetTagger = new PacketTagger();
+        packetTagger->stream_id = this->_streamId;
+        LOG("TrafficProfileDescriptor::", __func__, "[", this->name, "] added to", this->_streamId);
+    }
+    else {
+        ERROR("Attempting to add TrafficProfileDescriptor::", __func__, "[",
+            this->name, "] to invalid stream: ", this->_streamId);
+    }
 }
 
 void
@@ -158,4 +185,3 @@ uint64_t TrafficProfileDescriptor::parseTime(const string t) {
 }
 
 } // end of namespace
-

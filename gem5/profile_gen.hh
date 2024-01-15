@@ -29,6 +29,11 @@
 #include "sim/core.hh"
 #include "sim/sim_object.hh"
 
+// check if partition_fields_extension.hh is available
+#ifdef __MEM_CACHE_TAGS_PARTITIONING_POLICIES_FIELD_EXTENTION_HH__
+#include "mem/cache/tags/partitioning_policies/partition_fields_extension.hh"
+#endif
+
 // ATP includes
 #include "proto/tp_config.pb.h"
 #include "traffic_profile_manager.hh"
@@ -41,7 +46,7 @@
  * Traffic Profile implementation design (Matteo Andreozzi - n.TBD)
  */
 
-class ProfileGen : public SimObject {
+class ProfileGen : public gem5::SimObject {
 
 protected:
 
@@ -64,14 +69,14 @@ protected:
      * re-send the waiting packet.
      *\param idx ATP Master port ID
      */
-    void recvReqRetry(const PortID);
+    void recvReqRetry(const gem5::PortID);
 
     /*!
      * Outputs a packet trace to ostream,
      * given a memory packet pointer
      *\param pkt pointer to memory packet
      */
-    void tracePacket(const Packet*);
+    void tracePacket(const gem5::Packet*);
 
     /*!
      * Outputs a GEM5 packet trace to ostream
@@ -79,7 +84,7 @@ protected:
      * pointer
      *\param pkt pointer to GEM5 packet
      */
-    void traceM3iPacket(const Packet*);
+    void traceM3iPacket(const gem5::Packet*);
 
     /*!
      * Computes a time value to be passed to ATP Engine, given the
@@ -111,7 +116,7 @@ protected:
      * Pointer to the System object
      * in.
      */
-    System* system;
+    gem5::System* system;
 
     /*!
      * The Google Protocol Buffer configuration file to parse.
@@ -119,16 +124,16 @@ protected:
     const std::vector<std::string> configFiles;
 
     //! Buffered next ATP time
-    uint64_t nextAtpTime{ MaxTick };
+    uint64_t nextAtpTime{ gem5::MaxTick };
 
     //! Time to send next packets
-    Tick nextPacketTick{ 0 };
+    gem5::Tick nextPacketTick{ 0 };
 
     //! Flag to signal at least one profile is locked
     bool locked{ false };
 
     //! Master port specialization for the traffic generator
-    class ProfileGenPort : public MasterPort
+    class ProfileGenPort : public gem5::RequestPort
     {
       public:
         /*!
@@ -137,8 +142,8 @@ protected:
          *\param gen reference to ProfileGen parent object
          *\param idx the port id in an array of ports
          */
-        ProfileGenPort(const std::string& name, ProfileGen& gen, const PortID idx)
-            : MasterPort(name, &gen, idx), profileGen(gen)
+        ProfileGenPort(const std::string& name, ProfileGen& gen, const gem5::PortID idx)
+            : gem5::RequestPort(name, &gen, idx), profileGen(gen)
         { }
 
       protected:
@@ -149,25 +154,25 @@ protected:
          * Receives a response packet
          *\param pkt pointer to the response packet
          */
-        bool recvTimingResp(PacketPtr pkt);
+        bool recvTimingResp(gem5::PacketPtr pkt);
         /*!
          * Receives a snoop request packet
          *\param pkt pointer to the response packet
          */
-        void recvTimingSnoopReq(PacketPtr pkt) { }
+        void recvTimingSnoopReq(gem5::PacketPtr pkt) { }
 
         /*!
          * Receives a functional snoop request packet
          *\param pkt pointer to the response packet
          */
-        void recvFunctionalSnoop(PacketPtr pkt) { }
+        void recvFunctionalSnoop(gem5::PacketPtr pkt) { }
 
         /*!
          * Receives an atomic snoop request
          *\param pkt pointer to the response packet
          *\return always returns zero
          */
-        Tick recvAtomicSnoop(PacketPtr pkt) { return 0; }
+        gem5::Tick recvAtomicSnoop(gem5::PacketPtr pkt) { return 0; }
 
       private:
 
@@ -179,16 +184,16 @@ protected:
     std::vector<std::unique_ptr<ProfileGenPort>> port;
 
     //! Master to port mapping
-    std::map<RequestorID, PortID> interface;
+    std::map<gem5::RequestorID, gem5::PortID> interface;
 
     //! Packets waiting to be sent, organised per master
     std::multimap<std::string, TrafficProfiles::Packet*> localBuffer;
 
     //! Pointer to packet stalled on the ProfileGenPorts
-    std::map<PortID, Packet*> retryPkt;
+    std::map<gem5::PortID, gem5::Packet*> retryPkt;
 
     //! Tick when the stalled packet was meant to be sent
-    std::map<PortID, Tick> retryPktTick;
+    std::map<gem5::PortID, gem5::Tick> retryPktTick;
 
     /*!\brief UID-based routing support (optional)
      * If UID-based routing is enabled, ATP Engine will route
@@ -197,77 +202,77 @@ protected:
      *
      * the table is built as RequestorID, Address, Command, Request UID
      */
-    std::map<RequestorID, std::multimap<uint64_t,
+    std::map<gem5::RequestorID, std::multimap<uint64_t,
         std::multimap<TrafficProfiles::Command, uint64_t>>> routingTable;
 
 
     //! Event for scheduling updates
-    EventWrapper<ProfileGen, &ProfileGen::update> updateEvent;
+    gem5::EventWrapper<ProfileGen, &ProfileGen::update> updateEvent;
 
     //! Watchdog event
-    EventWrapper<ProfileGen, &ProfileGen::watchDog> watchdogEvent;
+    gem5::EventWrapper<ProfileGen, &ProfileGen::watchDog> watchdogEvent;
 
     /*!
      * Watchdog timer - if expires, dumps diagnostic debug info and kills ATP
      */
-    Tick watchdogEventTimer{ 0 };
+    gem5::Tick watchdogEventTimer{ 0 };
 
 
     // per-ATP master statistics
 
     //! Count the number of retries
-    Stats::Vector numRetries;
+    gem5::statistics::Vector numRetries;
 
     //! Count the time incurred from back-pressure.
-    Stats::Vector retryTime;
+    gem5::statistics::Vector retryTime;
 
     //! Counts the number of times a packet is found in the local buffer, per ATP master
-    Stats::Vector bufferedCount;
+    gem5::statistics::Vector bufferedCount;
 
     //! Sum of packets  found in the local buffer, per ATP master
-    Stats::Vector bufferedSum;
+    gem5::statistics::Vector bufferedSum;
 
     //! Average size of the adaptor local packet buffer per ATP master
-    Stats::Formula avgBufferedPackets;
+    gem5::statistics::Formula avgBufferedPackets;
 
     //! Number of packets sent by ATP Engine
-    Stats::Vector atpSent;
+    gem5::statistics::Vector atpSent;
 
     //! Number of packets received by ATP Engine
-    Stats::Vector atpReceived;
+    gem5::statistics::Vector atpReceived;
 
     //! Send rate for ATP packets
-    Stats::Vector atpSendRate;
+    gem5::statistics::Vector atpSendRate;
 
     //! Receive rate for ATP packets
-    Stats::Vector atpReceiveRate;
+    gem5::statistics::Vector atpReceiveRate;
 
     //! Average request to response latency
-    Stats::Vector atpLatency;
+    gem5::statistics::Vector atpLatency;
 
     //! Request to response Jitter (latency STD dev)
-    Stats::Vector atpJitter;
+    gem5::statistics::Vector atpJitter;
 
     //! Total ATP FIFO buffer underruns
-    Stats::Vector atpFifoUnderruns;
+    gem5::statistics::Vector atpFifoUnderruns;
 
     //! Total ATP FIFO buffer overruns
-    Stats::Vector atpFifoOverruns;
+    gem5::statistics::Vector atpFifoOverruns;
 
     //! Average OT
-    Stats::Vector atpOt;
+    gem5::statistics::Vector atpOt;
 
     //! Average FIFO level
-    Stats::Vector atpFifoLevel;
+    gem5::statistics::Vector atpFifoLevel;
 
     //! ATP masters start time
-    Stats::Vector atpStartTime;
+    gem5::statistics::Vector atpStartTime;
 
     //! ATP masters termination time
-    Stats::Vector atpFinishTime;
+    gem5::statistics::Vector atpFinishTime;
 
     //! ATP masters run time
-    Stats::Vector atpRunTime;
+    gem5::statistics::Vector atpRunTime;
 
     //! Enables the ATP to exit simulation if all profiles are depleted
     const bool exitWhenDone;
@@ -321,7 +326,7 @@ protected:
     std::unordered_map<uint64_t, TerminateCb> onTerminate;
 
     //! Per-Stream registered build request callbacks
-    using BuildReqCb = std::function<void(RequestPtr)>;
+    using BuildReqCb = std::function<void(gem5::RequestPtr)>;
     std::unordered_map<uint64_t, BuildReqCb> onBuildReq;
 
     /*!
@@ -329,14 +334,14 @@ protected:
      *\param p pointer to ATP packet
      *\return pointer to GEM5 packet
      */
-    Packet* buildGEM5Packet(const TrafficProfiles::Packet* );
+    gem5::Packet* buildGEM5Packet(const TrafficProfiles::Packet* );
 
     /*!
      *  builds a ATP Packet from a GEM5 one
      *\param p pointer to GEM5 packet
      *\return pointer to ATP packet
      */
-    TrafficProfiles::Packet* buildATPPacket(const Packet* );
+    TrafficProfiles::Packet* buildATPPacket(const gem5::Packet* );
 
     /*!
      * inserts an entry into the ATP UID routing table
@@ -350,21 +355,21 @@ protected:
     *\param p GEM5 Packet to be looked up
     *\return the corresponding UID
     */
-    uint64_t lookupAndRemoveRoutingEntry(const Packet*);
+    uint64_t lookupAndRemoveRoutingEntry(const gem5::Packet*);
 
     /*!
      * Gets the corresponding gem5 memory command given an ATP packet
      *\param p ATP packet
      *\return a gem5 memory command
      */
-    MemCmd::Command getGem5Command(const TrafficProfiles::Packet*) const;
+    gem5::MemCmd::Command getGem5Command(const TrafficProfiles::Packet*) const;
 
     /*!
      * Gets the corresponding ATP packet command given a gem5 packet
      *\param p gem5 packet
      *\return an ATP packet command
      */
-    TrafficProfiles::Command getAtpCommand(const Packet*) const;
+    TrafficProfiles::Command getAtpCommand(const gem5::Packet*) const;
 
 public:
 
@@ -372,30 +377,37 @@ public:
      *  Constructor
      *\param p configuration parameters
      */
-    ProfileGen(const ProfileGenParams*);
+    PARAMS(gem5::ProfileGen);
+    ProfileGen(const Params &p);
     /*!
      * Returns a reference to the master port
      *\param if_name name of the interface
      *\param idx port index
      *\return reference to the master port
      */
-    virtual Port& getPort(const string& if_name, PortID idx = InvalidPortID) override;
+    virtual gem5::Port& getPort(const string& if_name, gem5::PortID idx = gem5::InvalidPortID) override;
+
+    /*!
+     * Get master device names associated with the ProfileGen
+     */
+    const unordered_set<string> getMasters ();
+
 
     //! Initializes the Profile Generator
     virtual void init() override;
     virtual void startup() override;
     //! Starts draining the Profile Generator
-    DrainState drain() override;
+    gem5::DrainState drain() override;
     /*!
      * Serializes to checkpoint
      *\param cp reference to the checkpoint
      */
-    virtual void serialize(CheckpointOut &cp) const override;
+    virtual void serialize(gem5::CheckpointOut &cp) const override;
     /*!
      * Un-serializes to checkpoint
      *\param cp reference to the checkpoint
      */
-    virtual void unserialize(CheckpointIn &cp) override;
+    virtual void unserialize(gem5::CheckpointIn &cp) override;
 
     //! Registers statistics
     void regStats() override;
@@ -404,13 +416,13 @@ public:
      * Schedules (or reschedules if neccessary) the update event
      *\param when Tick when to schedule the update
      */
-    void scheduleUpdate(const Tick when=curTick());
+    void scheduleUpdate(const gem5::Tick when=gem5::curTick());
 
     /* Interface for initialising Streams from Python */
     void initStream(const std::string &master_name,
                     const std::string &root_prof_name,
-                    const Addr read_base, const Addr read_range,
-                    const Addr write_base, const Addr write_range,
+                    const gem5::Addr read_base, const gem5::Addr read_range,
+                    const gem5::Addr write_base, const gem5::Addr write_range,
                     const uint32_t task_id);
 
     /*

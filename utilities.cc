@@ -66,7 +66,7 @@ string extractHead(const string& s){
 
 string extractTail(const string& s){
     string ret { trimOuterCopy(s) };
-    const auto sep_pos { ret.find_first_of(' ') };
+    const auto sep_pos = ret.find_first_of(' ');
     return (sep_pos == string::npos) ? string { } :
            ret.substr(ret.find_first_not_of(' ', sep_pos + 1));
 }

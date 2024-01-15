@@ -17,10 +17,6 @@
 
 namespace TrafficProfiles {
 
-PacketDesc::~PacketDesc() {
-      if (tagger!=nullptr) delete tagger;
-}
-
 void PacketDesc::reset() {
     LOG("PacketDesc::reset",
             tpId,"reset requested");
@@ -33,7 +29,9 @@ void PacketDesc::reset() {
 }
 
 void PacketDesc::init(const uint64_t parentId,
-                      const PatternConfiguration& from) {
+                      const PatternConfiguration& from,
+                      PacketTagger* parentTagger
+                      ) {
     tpId = parentId;
 
     bool addressOk = true, sizeOk = true;
@@ -112,9 +110,11 @@ void PacketDesc::init(const uint64_t parentId,
 
     // set up packet tagger if needed
     if (from.has_lowid() || from.has_highid()){
-        tagger = new PacketTagger();
-        tagger->lowId = from.lowid();
-        tagger->highId = from.highid();
+        tagger = parentTagger;
+        // reset currentId as PacketTagger might have already been used
+        tagger->resetCurrentId();
+        tagger->low_id = from.lowid();
+        tagger->high_id = from.highid();
     }
 
     if (from.has_alignment()) {
@@ -125,7 +125,6 @@ void PacketDesc::init(const uint64_t parentId,
                     alignment,"is not a power of two");
         }
     }
-
 
     // init first value
     if (addressType == CONFIGURED) {
@@ -223,7 +222,6 @@ uint64_t PacketDesc::getAddress() {
     return currentAddress;
 }
 
-
 uint64_t PacketDesc::getSize() {
     uint64_t ret = 0;
     if (sizeType == CONFIGURED) {
@@ -237,7 +235,6 @@ uint64_t PacketDesc::getSize() {
         "size", ret);
     return ret;
 }
-
 
 bool PacketDesc::send(Packet*& p, const uint64_t time) {
     p = nullptr;
@@ -268,7 +265,7 @@ bool PacketDesc::send(Packet*& p, const uint64_t time) {
             p->set_time(time);
             // tag packet if needed
             if (tagger!=nullptr) {
-                tagger->tag(p);
+                tagger->tagPacket(p);
                 LOG("PacketDesc::send [", tpId, "] local tagger assigned id",p->id());
             }
             LOG("PacketDesc::send [", tpId, "] new packet created [command",

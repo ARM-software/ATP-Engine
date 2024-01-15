@@ -143,20 +143,8 @@ system.mem_ranges = [mem_range]
 # do not worry about reserving space for the backing store
 mmap_using_noreserve = True
 
-# gem5 v20.1 -> no support for "QoSMemSinkInterface" in "config_mem"
-if issubclass(mem_type, QoSMemSinkInterface):
-    nbr_mem_ctrls = options.mem_channels
-    intlv_bits = int(log(nbr_mem_ctrls, 2))
-    intlv_size = max(128, system.cache_line_size.value)
-    mem_ctrls = []
-    for i in range(nbr_mem_ctrls):
-        mem_intf = create_mem_intf(mem_type, system.mem_ranges[0], i,
-                                   nbr_mem_ctrls, intlv_bits, intlv_size, 0)
-        mem_ctrls.append(QoSMemSinkCtrl(interface=mem_intf))
-        mem_ctrls[-1].port = system.membus.mem_side_ports
-    system.mem_ctrls = mem_ctrls
-else:
-    config_mem(options, system)
+# Memory configuration
+config_mem(options, system)
 
 for mem_ctrl in system.mem_ctrls:
     if issubclass(mem_type, QoSMemSinkInterface):
